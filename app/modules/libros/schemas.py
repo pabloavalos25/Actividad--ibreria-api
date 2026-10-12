@@ -1,10 +1,19 @@
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import ConfigDict
 from sqlmodel import SQLModel
 
 from app.modules.editoriales.schemas import EditorialRef
 from app.modules.generos.schemas import GeneroRef
+
+RolAutor = Literal["autor", "coautor", "traductor", "ilustrador"]
+
+
+class AutoriaCreate(SQLModel):
+    autor_id: int
+    rol: RolAutor
+    orden: int
 
 
 class LibroCreate(SQLModel):
@@ -14,6 +23,7 @@ class LibroCreate(SQLModel):
     stock: int
     editorial_id: int
     genero_id: int | None = None
+    autores: list[AutoriaCreate] = []
 
 
 class LibroUpdate(SQLModel):

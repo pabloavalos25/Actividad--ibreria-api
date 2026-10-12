@@ -1,10 +1,31 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from pydantic import ConfigDict, computed_field, field_serializer
-from sqlmodel import SQLModel
+from pydantic import ConfigDict, computed_field, field_serializer, model_validator
+from sqlmodel import SQLModel, Field
 
 from app.modules.clientes.schemas import ClienteRef
+
+
+class RenglonCreate(SQLModel):
+    model_config = ConfigDict(extra="forbid")
+
+    libro_id: int
+    cantidad: int = Field(gt=0)
+
+
+class VentaCreate(SQLModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cliente_id: int
+    renglones: list[RenglonCreate] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def sin_libros_repetidos(self):
+        ids = [r.libro_id for r in self.renglones]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Un mismo libro no puede repetirse en dos renglones")
+        return self
 
 
 class RenglonRead(SQLModel):

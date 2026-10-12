@@ -3,9 +3,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.modules.libros import service
-from app.modules.libros.schemas import LibroDetalleRead, LibroRead, LibroUpdate
+from app.modules.libros.schemas import (
+    LibroCreate,
+    LibroDetalleRead,
+    LibroRead,
+    LibroUpdate,
+)
 
 router = APIRouter(prefix="/libros", tags=["libros"])
+
+
+@router.post("/", response_model=LibroDetalleRead, status_code=201)
+async def crear_libro(
+    datos: LibroCreate,
+    session: AsyncSession = Depends(get_session),
+) -> LibroDetalleRead:
+    libro = await service.crear_libro(session, datos)
+    return service.detalle(libro)
 
 
 @router.get("/", response_model=list[LibroRead])

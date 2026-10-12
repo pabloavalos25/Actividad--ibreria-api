@@ -27,14 +27,24 @@ opciones_listado = (
 
 
 async def crear_libro(session: AsyncSession, datos: LibroCreate) -> Libro:
-    libro = Libro.model_validate(datos, from_attributes=True)
+    libro = Libro(
+        isbn=datos.isbn,
+        titulo=datos.titulo,
+        precio=datos.precio,
+        stock=datos.stock,
+        editorial_id=datos.editorial_id,
+        genero_id=datos.genero_id,
+        autorias=[
+            LibroAutor(autor_id=a.autor_id, rol=a.rol, orden=a.orden)
+            for a in datos.autores
+        ],
+    )
     session.add(libro)
     async with conflicto_de_integridad(
-        session, "No se pudo crear el libro: editorial, genero o isbn invalidos"
+        session, "No se pudo crear el libro: editorial, genero, autor o isbn invalidos"
     ):
         await session.commit()
-    await session.refresh(libro)
-    return libro
+    return await obtener_libro(session, libro.id)
 
 
 async def listar_libros(

@@ -1,16 +1,59 @@
+from decimal import Decimal
+
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.core.errors import no_encontrado
+from app.core.errors import conflicto_de_integridad, no_encontrado
 from app.modules.clientes import service as clientes_service
+from app.modules.libros.models import Libro
 from app.modules.ventas.models import RenglonVenta, Venta
-from app.modules.ventas.schemas import ClienteRef, RenglonRead, VentaRead
+from app.modules.ventas.schemas import (
+    ClienteRef,
+    RenglonRead,
+    VentaCreate,
+    VentaRead,
+)
 
 opciones_venta = (
     joinedload(Venta.cliente),
     selectinload(Venta.renglones).joinedload(RenglonVenta.libro),
 )
+
+
+async def crear_venta(session: AsyncSession, datos: VentaCreate) -> Venta:
+    libro_ids = [r.libro_id for r in datos.renglones]
+    result = await session.execute(
+        select(Libro).where(Libro.id.in_(libro_ids))
+    )
+    libros = {libro.id: libro for libro in result.scalars().all()}
+
+    total = Decimal("0")
+    renglones: list[RenglonVenta] = []
+    for item in datos.renglones:
+        libro = libros.get(item.libro_id)
+        if libro is None:
+            raise HTTPException(
+                status_code=409,
+                detail="No se pudo registrar la venta: cliente o libros invalidos",
+            )
+        total += libro.precio * item.cantidad
+        renglones.append(
+            RenglonVenta(
+                libro_id=item.libro_id,
+                cantidad=item.cantidad,
+                precio_unitario=libro.precio,
+            )
+        )
+
+    venta = Venta(cliente_id=datos.cliente_id, total=total, renglones=renglones)
+    session.add(venta)
+    async with conflicto_de_integridad(
+        session, "No se pudo registrar la venta: cliente o libros invalidos"
+    ):
+        await session.commit()
+    return await obtener_venta(session, venta.id)
 
 
 async def listar_ventas(
