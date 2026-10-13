@@ -1,0 +1,112 @@
+# Casos C-01 a C-05 y C-08: validación, conflictos y búsqueda segura.
+#
+# Antes de correrlos, dejar la base en el estado inicial:  python seed.py
+# Ninguno de estos casos modifica datos, así que se pueden repetir.
+
+@base = http://127.0.0.1:8000
+
+### C-01 · Un parámetro de ruta que no es entero
+# Resultado esperado: 422, sin ejecutar el handler.
+GET {{base}}/libros/abc
+
+### C-02 · ISBN repetido
+# El ISBN ya pertenece al libro 1 (Rayuela).
+# Resultado esperado: 409 con mensaje propio:
+#   {"detail": "No se pudo crear el libro: editorial, genero, autor o isbn invalidos"}
+POST {{base}}/libros/
+Content-Type: application/json
+
+{
+  "isbn": "978-950-00-0001-1",
+  "titulo": "Otro libro con el mismo ISBN",
+  "precio": "1000.00",
+  "stock": 1,
+  "editorial_id": 1
+}
+
+### C-02 · Email repetido
+# El email ya pertenece al cliente 2 (Tomás Ríos).
+# Resultado esperado: 409 con mensaje propio:
+#   {"detail": "Ya existe un cliente con ese email"}
+POST {{base}}/clientes/
+Content-Type: application/json
+
+{
+  "nombre": "Otro Tomás",
+  "email": "tomas@example.com"
+}
+
+### C-03 · Segundo perfil para el mismo cliente
+# El cliente 1 (Ana Gómez) ya tiene perfil.
+# Resultado esperado: 409
+#   {"detail": "El cliente ya tiene un perfil"}
+POST {{base}}/clientes/1/perfil
+Content-Type: application/json
+
+{
+  "telefono": "+54 11 5555-0202",
+  "direccion": "Otra dirección 456"
+}
+
+### C-04 · Libro con una editorial inexistente
+# Resultado esperado: 409 con mensaje propio:
+#   {"detail": "No se pudo crear el libro: editorial, genero, autor o isbn invalidos"}
+POST {{base}}/libros/
+Content-Type: application/json
+
+{
+  "isbn": "978-950-00-0090-0",
+  "titulo": "Libro sin editorial válida",
+  "precio": "1000.00",
+  "stock": 1,
+  "editorial_id": 999
+}
+
+### C-04 · Libro con un autor inexistente
+# Resultado esperado: 409 con mensaje propio:
+#   {"detail": "No se pudo crear el libro: editorial, genero, autor o isbn invalidos"}
+POST {{base}}/libros/
+Content-Type: application/json
+
+{
+  "isbn": "978-950-00-0091-1",
+  "titulo": "Libro sin autor válido",
+  "precio": "1000.00",
+  "stock": 1,
+  "editorial_id": 1,
+  "autores": [
+    { "autor_id": 999, "rol": "autor", "orden": 1 }
+  ]
+}
+
+### C-05 · Venta con un libro inexistente
+# Resultado esperado: 409
+#   {"detail": "No se pudo registrar la venta: cliente o libros invalidos"}
+POST {{base}}/ventas/
+Content-Type: application/json
+
+{
+  "cliente_id": 2,
+  "renglones": [
+    { "libro_id": 999, "cantidad": 1 }
+  ]
+}
+
+### C-05 · Venta con un cliente inexistente
+# Resultado esperado: 409
+#   {"detail": "No se pudo registrar la venta: cliente o libros invalidos"}
+POST {{base}}/ventas/
+Content-Type: application/json
+
+{
+  "cliente_id": 999,
+  "renglones": [
+    { "libro_id": 1, "cantidad": 1 }
+  ]
+}
+
+### C-08 · Búsqueda por título con el texto ' OR '1'='1
+# El texto viaja como parámetro ligado: se busca como título literal y no
+# coincide con ningún libro.
+# Resultado esperado: 200 con lista vacía: []
+GET {{base}}/libros/?titulo=%27%20OR%20%271%27%3D%271
