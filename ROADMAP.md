@@ -12,8 +12,8 @@ Persistencia entre sesiones: engram (`--project libreria-api`), hitos al cerrar 
 | 4 | Contratos y CRUD: schemas, service/router, paginación RN-10, exclude_unset, 409 propios, sin PATCH ventas | [x] | códigos HTTP correctos |
 | 5 | Altas con relaciones: POST /libros, POST /ventas (renglones anidados) | [x] | RN-04…RN-07 |
 | 6 | Lecturas sin N+1: joinedload/selectinload | [x] | nº fijo de consultas en consola |
-| 7 | Asincronía: async def + BackgroundTasks (asyncio.sleep(0.5)) | [ ] | log del comprobante |
-| 8 | Tests y entrega: seed.py, test/*.http C-01…C-08, README, evidencia C-07 | [ ] | los 8 casos pasan |
+| 7 | Asincronía: async def + BackgroundTasks (asyncio.sleep(0.5)) | [x] | log del comprobante |
+| 8 | Tests y entrega: seed.py, test/*.http C-01…C-08, README, evidencia C-07 | [x] | los 8 casos pasan |
 
 Orden crítico lineal: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8.
 
