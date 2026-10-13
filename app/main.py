@@ -17,6 +17,9 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
 )
+# El echo del motor ya escribe las consultas con su propio handler; sin esto
+# cada una saldría dos veces en la consola.
+logging.getLogger("sqlalchemy.engine").propagate = False
 
 
 @asynccontextmanager
