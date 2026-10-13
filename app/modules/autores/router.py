@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
@@ -44,6 +44,8 @@ async def actualizar_autor(
 @router.get("/{autor_id}/libros", response_model=list[LibroConRol])
 async def listar_libros_de_autor(
     autor_id: int,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
 ) -> list[LibroConRol]:
-    return await service.listar_libros_de_autor(session, autor_id)
+    return await service.listar_libros_de_autor(session, autor_id, limit, offset)

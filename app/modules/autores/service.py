@@ -41,13 +41,17 @@ async def actualizar_autor(
 async def listar_libros_de_autor(
     session: AsyncSession,
     autor_id: int,
+    limit: int,
+    offset: int,
 ) -> list[LibroConRol]:
     await obtener_autor(session, autor_id)
     result = await session.execute(
         select(LibroAutor)
         .where(LibroAutor.autor_id == autor_id)
         .options(joinedload(LibroAutor.libro))
-        .order_by(LibroAutor.orden)
+        .order_by(LibroAutor.orden, LibroAutor.libro_id)
+        .offset(offset)
+        .limit(limit)
     )
     return [
         LibroConRol(

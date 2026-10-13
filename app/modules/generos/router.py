@@ -32,7 +32,11 @@ async def listar_generos(
 @router.get("/{genero_id}/libros", response_model=list[LibroRead])
 async def listar_libros_de_genero(
     genero_id: int,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
 ) -> list[LibroRead]:
-    libros = await libros_service.listar_libros_de_genero(session, genero_id)
+    libros = await libros_service.listar_libros_de_genero(
+        session, genero_id, limit, offset
+    )
     return [LibroRead.model_validate(libro, from_attributes=True) for libro in libros]

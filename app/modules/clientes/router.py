@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
@@ -57,7 +57,11 @@ async def crear_perfil(
 @router.get("/{cliente_id}/ventas", response_model=list[VentaRead])
 async def listar_ventas_de_cliente(
     cliente_id: int,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
 ) -> list[VentaRead]:
-    ventas = await ventas_service.listar_ventas_de_cliente(session, cliente_id)
+    ventas = await ventas_service.listar_ventas_de_cliente(
+        session, cliente_id, limit, offset
+    )
     return [ventas_service.a_read(venta) for venta in ventas]

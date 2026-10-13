@@ -86,6 +86,8 @@ async def obtener_venta(session: AsyncSession, venta_id: int) -> Venta:
 async def listar_ventas_de_cliente(
     session: AsyncSession,
     cliente_id: int,
+    limit: int,
+    offset: int,
 ) -> list[Venta]:
     await clientes_service.obtener_cliente(session, cliente_id)
     result = await session.execute(
@@ -93,6 +95,8 @@ async def listar_ventas_de_cliente(
         .where(Venta.cliente_id == cliente_id)
         .options(*opciones_venta)
         .order_by(Venta.id)
+        .offset(offset)
+        .limit(limit)
     )
     return list(result.scalars().unique().all())
 

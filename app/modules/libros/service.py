@@ -100,6 +100,8 @@ async def actualizar_libro(
 async def listar_libros_de_editorial(
     session: AsyncSession,
     editorial_id: int,
+    limit: int,
+    offset: int,
 ) -> list[Libro]:
     await editoriales_service.obtener_editorial(session, editorial_id)
     result = await session.execute(
@@ -107,6 +109,8 @@ async def listar_libros_de_editorial(
         .where(Libro.editorial_id == editorial_id)
         .options(*opciones_listado)
         .order_by(Libro.id)
+        .offset(offset)
+        .limit(limit)
     )
     return list(result.scalars().unique().all())
 
@@ -114,6 +118,8 @@ async def listar_libros_de_editorial(
 async def listar_libros_de_genero(
     session: AsyncSession,
     genero_id: int,
+    limit: int,
+    offset: int,
 ) -> list[Libro]:
     await generos_service.obtener_genero(session, genero_id)
     result = await session.execute(
@@ -121,6 +127,8 @@ async def listar_libros_de_genero(
         .where(Libro.genero_id == genero_id)
         .options(*opciones_listado)
         .order_by(Libro.id)
+        .offset(offset)
+        .limit(limit)
     )
     return list(result.scalars().unique().all())
 
