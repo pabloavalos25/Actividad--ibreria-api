@@ -4,3 +4,13 @@ __pycache__/
 *.pyc
 .pytest_cache/
 engram-export.json
+# Herramientas de asistencia y planificación (estado local, no forman parte de la entrega)
+.atl/
+.claude/
+.codegraph/
+.active-orchestrator-state.json
+openspec/
+knowledge-base/
+CHANGES.md
+AGENTS.md
+CLAUDE.md
