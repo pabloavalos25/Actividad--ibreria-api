@@ -355,7 +355,7 @@ Flujo: `upgrade head` → `seed.py` → `uvicorn` → probar. `downgrade -1` sol
 
 ## Troubleshooting (Windows)
 
-<details>
+<details open>
 <summary>Ver síntomas y soluciones</summary>
 
 | Síntoma | Causa probable | Comando / solución |
@@ -371,7 +371,7 @@ Flujo: `upgrade head` → `seed.py` → `uvicorn` → probar. `downgrade -1` sol
 
 ## Checklist de entrega
 
-<details>
+<details open>
 <summary>Ver checklist</summary>
 
 - [ ] `pip install -r requirements.txt` OK en entorno limpio.
@@ -386,7 +386,12 @@ Flujo: `upgrade head` → `seed.py` → `uvicorn` → probar. `downgrade -1` sol
 
 ## Integrantes
 
-Trabajo grupal — Programación III (UTN), unidades 1 a 4.
+<p align="center">
+  <strong>Trabajo grupal — Programación III (UTN), unidades 1 a 4.</strong>
+</p>
 
-| Pablo Avalos | Ismael Suarez | Sofia Blangetti |
-|:---:|:---:|:---:|
+<p align="center">
+  <img src="https://img.shields.io/badge/Pablo_Avalos-UTN-1976D2?style=for-the-badge" alt="Pablo Avalos" />
+  <img src="https://img.shields.io/badge/Ismael_Suarez-UTN-388E3C?style=for-the-badge" alt="Ismael Suarez" />
+  <img src="https://img.shields.io/badge/Sofia_Blangetti-UTN-7B1FA2?style=for-the-badge" alt="Sofia Blangetti" />
+</p>
