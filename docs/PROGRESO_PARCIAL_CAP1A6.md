@@ -2,7 +2,7 @@
 
 Actualizado: 5 de noviembre de 2026. Fuente de requisitos: `Parcial_Cap1a6_Consigna.pdf`; matriz completa en [REQUISITOS_PARCIAL_CAP1A6.md](REQUISITOS_PARCIAL_CAP1A6.md). Configuración y seguridad autorizadas expresamente por el usuario en esta sesión; ver [plan](PLAN_PARCIAL_CAP1A6.md).
 
-Estado actual: **ejercicios 1 y 2 completados**. Ver bloque 2 más abajo para los modelos y migraciones. Conteos actuales: **44 pruebas sin DB y 29 online PostgreSQL**, sin casos omitidos dentro de las suites ejecutadas.
+Estado actual: **ejercicios 1 a 4 implementados**; las secciones cronológicas conservan los resultados de cada bloque. Conteos actuales: **179 pruebas sin DB y 55 online PostgreSQL**, sin casos omitidos dentro de las suites ejecutadas. Sigue el ejercicio 5 (autorización completa).
 
 ## Bloque 1 implementado
 
@@ -142,8 +142,46 @@ Verificación final:
 
 Ejercicio 4: registro/login/cookie y limitación de intentos, con DTO de registro sin roles/salidas sin hash; conectar `requerir_usuario_id` a validación real de sesión y permisos (coordinado con ejercicio 5). Después completar repositorios/UoW, stock/ventas atómicas y evidencias según el plan. La CLI OpenSpec ahora responde, pero `openspec list --json` informa `root:null`, `changes:[]`, `no_openspec_root`; las skills OpenSpec no se encontraron en ubicaciones activas. No se inicializó estructura OPSX ni se inventó un change para este bloque.
 
+## Ejercicio 4 - autenticación (5 de noviembre de 2026)
+
+Implementado en `master`, sin commit/push ni archive en este bloque. OpenSpec está inicializado desde el cierre del ejercicio 3; change activo `ejercicio-4-autenticacion`, con propuesta, especificación, diseño y tareas. Gobernanza CRITICAL con aprobación previa registrada en el plan. `Decision: no (no UI)`.
+
+- Registro estricto sin roles: usuario, CLIENTE y cliente en una transacción; conflictos de correo de usuario o cliente dan 409 sin apropiación. Salidas explícitas sin hash.
+- Login con bcrypt en hilo bajo semáforo; hash ficticio ante correo inexistente y mismo 401 ante clave incorrecta. Cinco fallos correo/IP en ventana de 60s bloquean el siguiente intento con 429/Retry-After sin bcrypt. Éxito reinicia conteo conservando historial. IP de conexión, sin confiar cabeceras de proxy.
+- Cookie `access_token` HttpOnly/SameSite=Lax/Max-Age; JWT HS256 fijo, sub/exp requeridos. Roles token informativos; roles vigentes consultados en DB. No autentica Authorization. `/auth/yo`, logout público y cambio de contraseña documentados en README.
+- Cambio de contraseña captura ID/hash y finaliza la lectura autobegin de la dependencia antes de verificar/generar hash; recarga dentro del UoW, verifica activo/hash sin cambios y guarda hash/flag/evento atómicamente. Conserva la misma cookie.
+- Alta de libros conectada a actor real con ADMIN vigente y sin cambio obligatorio. Una revocación/vencimiento en DB afecta la misma cookie aunque el token conserve ADMIN.
+- Repositorio/UoW del módulo usuarios: repositorio sólo flush; servicio abre UoW, éste confirma/revierte sin cerrar sesión compartida de petición. La migración del resto de módulos y las clases genéricas del ejercicio 6 siguen pendientes.
+- Intentos de acceso usan sesión/transacción propias para sobrevivir rollback de login. Comentario obligatorio explica excepción y costo de conservar historial. Las pruebas inyectan errores tras flush para verificar rollback de registro y contraseña/evento.
+
+Decisiones locales: mínimo de nuevas contraseñas 8 caracteres, máximo de todas 72 bytes UTF-8; HS256 y TTL default 1800 (`JWT_TTL_SECONDS`); `COOKIE_SECURE=false` para HTTP local, configurable true para HTTPS. La consigna no impone esos defaults. EmailStr normaliza dominio; parte local sensible a mayúsculas según UNIQUE actual. `.env` real y `despliegue/` intactos; no se cambiaron modelos ni migraciones, no seed ni bases ajenas.
+
+### TDD Cycle Evidence
+
+Baseline real previa a producción: **158/158** en 9.03s. PyJWT no estaba instalado; se agregó dependencia `PyJWT>=2.10,<3` y se instaló 2.15.1 sólo en `.venv`, antes de confirmar RED de primitivas ausentes.
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| 1.1 Contratos/bcrypt/JWT | `test/test_auth_primitives.py` | DTO/unidad/hilo | 158/158 | verify_password inexistente | 15/15 inicial | límites UTF-8, claves/TTL, vencimiento y campos extra | suite verde |
+| 2.1 Registro/login | `postgres_tests/test_auth.py` | ASGI/PostgreSQL | baseline 158; suite PG previa 37 | router inexistente | escenarios de registro/login verdes | correo usuario/cliente, 5 fallos sin enumeración, ventana60s/IP/éxito, rollback tras flush | 55/55 total |
+| 3.1 Sesión/actor/cambio | `postgres_tests/test_auth.py` | ASGI/PostgreSQL | suite inicial conservada | router inexistente | cookie/sesión/cambio/actor verdes | Secure false/true; Bearer/vencido/inactivo/inexistente; ADMIN revocado/vencido/cambio; evento rollback | 55/55 total |
+| Hash antes transacción | `test/test_auth_transactions.py` | Unidad servicio | 173/173 sin DB | cambio mantenía autobegin: 1 fallo | 2/2 | registro y cambio password | recarga tras rollback, suite verde |
+| Sujeto JWT malformado | `test/test_auth_primitives.py` | Unidad | 17 unitarios auth verdes | sub 5000 dígitos lanzaba ValueError | 19/19 primitivas | enorme, entero, negativo, fuera de rango | límite previo a int, suite verde |
+
+Verificación final: `python -m pytest -q`: **179 passed in 8.80s** (incluye 158 previas). Aviso de deprecación Starlette/httpx sin fallos. `PYTHONIOENCODING=utf-8 python scripts/test_postgres.py`: **55 passed in 13.39s**, de las cuales 18 nuevas de auth; cluster propio `tmp/postgres-tests-66353506987e`, puerto 63729, `server stopped` confirmado. Migraciones head -> base -> head, sin tablas/función remanentes tras base y `alembic check` sin drift antes/después. El único cambio posterior al runner fue endurecer longitud sub JWT (pruebas unitarias ejecutadas), docstring y documentación.
+
+Los primeros intentos PG detectaron errores de fixture: importar modelos relacionados antes de inicializar mappers; commits reales de auth contaminaban las tablas que los tests anteriores esperaban vacías; ISBN de prueba uuid32 excedía max20. Se corrigieron los fixtures, sin relajar validaciones ni tests previos. Cleanup usa TRUNCATE sólo después de verificar directorio y base del cluster temporal propio; necesario por intentos independientes y movimientos sólo-agregado. Todos los clusters propios de los intentos quedaron detenidos.
+
+### Próximo bloque
+
+Ejercicio 5: gestión de personal/roles, permisos en toda la matriz, grupo protegido con control único de cambio obligatorio, propiedad de ventas y auditoría de cambios de rol. La comprobación ADMIN del alta es integración puntual, no finaliza ese ejercicio. Después, repositorios/UoW generales, stock/ventas atómicas, seed/evidencias y Docker/VPS según el plan.
+
 ### Formalización OPSX posterior (5 de noviembre de 2026)
 
 Por pedido explícito del usuario se inicializó OpenSpec con Codex y se completó propose → apply → archive para `ejercicio-3-contratos-crud-paginacion`. La propuesta registra que el código ya existía; apply reconcilió seis tareas, sin modificar producción ni recrear TDD retrospectivo. Se repitió la suite sin DB: **158 passed in 9.20s**; las **37 pruebas PostgreSQL** se respaldan con el log íntegro anterior, sin presentarlas como nueva ejecución.
 
 Archivo local: `openspec/changes/archive/2026-11-05-ejercicio-3-contratos-crud-paginacion/`. La CLI sincronizó ocho requisitos en `openspec/specs/contratos-crud/spec.md` y `openspec/specs/listados-paginados/spec.md`; `openspec validate --specs --strict`: **2 passed, 0 failed**. La lista de cambios activos quedó vacía. Se conservan explícitamente pendientes registro/auth4, permisos5, repositorios/UoW y stock de ventas; el alta sigue cerrada401 hasta integrar acceso. `openspec/` continúa ignorado por Git según la política existente; sin commit.
+
+### Archivo OPSX del ejercicio 4 (5 de noviembre de 2026)
+
+Por pedido explícito del usuario, se archivó `ejercicio-4-autenticacion` con las cuatro tareas completas y validación estricta aprobada. La CLI sincronizó seis requisitos en la nueva especificación `openspec/specs/autenticacion/spec.md` y creó `openspec/changes/archive/2026-11-05-ejercicio-4-autenticacion/`. Se verificó que el contenido sincronizado conserva propósito, requisitos y escenarios del delta. `openspec validate --specs --strict`: **3 passed, 0 failed**; `openspec list --json`: sin cambios activos. Se reutiliza la verificación inmediata de **179 pruebas sin DB y 55 PostgreSQL**, sin presentarla como otra ejecución. El ejercicio 5 y los demás pendientes indicados arriba siguen abiertos; el alta de libros ya utiliza autenticación y ADMIN vigente implementados en el ejercicio 4. Los artefactos OpenSpec siguen locales e ignorados por la política existente de Git.

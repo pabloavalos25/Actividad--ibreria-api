@@ -4,7 +4,19 @@ API asincrónica con FastAPI, SQLModel y PostgreSQL. Continúa el TP de capítul
 
 Integrantes: Pablo Avalos, Ismael Suarez y Sofia Blangetti.
 
-El parcial está en desarrollo. Se implementaron el ejercicio 1 (configuración, ciclo de vida y salud), el ejercicio 2 (modelos, relaciones y migraciones) y los contratos/CRUD/paginación del ejercicio 3, con pruebas automatizadas. El alta de libros queda cerrada con 401 hasta conectar el usuario autenticado en el ejercicio 4; la integración con un usuario real ya está probada en PostgreSQL. La capa de repositorios/UoW, los endpoints de acceso/roles, la lógica de movimientos de stock y los casos C completos siguen pendientes. Ver [progreso y evidencia TDD](docs/PROGRESO_PARCIAL_CAP1A6.md) y [requisitos completos](docs/REQUISITOS_PARCIAL_CAP1A6.md).
+El parcial está en desarrollo. Están implementados los ejercicios 1 a 4: configuración, modelos/migraciones, contratos/CRUD/paginación y autenticación. El alta de libros ya usa una sesión real con rol ADMIN vigente consultado en DB. Quedan la administración completa de roles y permisos del ejercicio 5, la migración general a repositorios/UoW, stock/ventas atómicas y los casos C completos. Ver [progreso y evidencia TDD](docs/PROGRESO_PARCIAL_CAP1A6.md) y [requisitos completos](docs/REQUISITOS_PARCIAL_CAP1A6.md).
+
+## Acceso (ejercicio 4)
+
+- `POST /auth/registro`: `{nombre,email,password}`, crea usuario+CLIENTE+cliente atómicamente (201). Correo ya registrado como usuario o cliente: 409. No acepta roles ni devuelve hash.
+- `POST /auth/login`: `{email,password}`, devuelve mensaje/flag/expiración y establece cookie `access_token`; no entrega token en JSON. Cinco fallos de correo/IP en 60 segundos bloquean el siguiente intento con 429 y `Retry-After`. Un éxito reinicia el conteo sin borrar historial.
+- `GET /auth/yo`: usuario sin hash, `roles_vigentes` de DB y `roles_token` informativos. Sólo cookie autentica; `Authorization` no se utiliza.
+- `POST /auth/cambiar-password`: `{password_actual,password_nueva}`, actualiza hash/flag y evento en una transacción; la misma cookie sigue funcionando. `POST /auth/logout` borra cookie y es público.
+- Nuevas contraseñas: mínimo 8 caracteres; todas admiten como máximo 72 bytes UTF-8. Son decisiones del proyecto, al igual que HS256 y TTL por defecto 1800s (`JWT_TTL_SECONDS`). `COOKIE_SECURE=false` permite desarrollo HTTP local; usar true bajo HTTPS. Cookie HttpOnly y SameSite=Lax. Mantener `JWT_SECRET` aleatorio y fuera de Git.
+- Email usa la validación EmailStr (normaliza dominio); la parte local conserva mayúsculas y la comparación coincide con el UNIQUE PostgreSQL sensible a mayúsculas. No se unifican fichas existentes silenciosamente.
+- Los intentos se confirman en una sesión independiente para sobrevivir al rollback del login. La IP viene de la conexión; no se confía en `X-Forwarded-For`.
+
+Los endpoints anteriores usan repositorio y UoW del módulo usuarios, compartiendo sesión de petición con autenticación. Los CRUD anteriores aún deben migrarse en ejercicio 6. La matriz general de permisos, alta de personal, administración de roles y restricciones globales de cambio obligatorio quedan para ejercicio 5; no se declara finalizada esa autorización.
 
 ## Dos proyectos para la entrega
 

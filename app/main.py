@@ -15,6 +15,7 @@ from app.modules.generos.router import router as generos_router
 from app.modules.health.router import router as health_router
 from app.modules.libros.router import router as libros_router
 from app.modules.ventas.router import router as ventas_router
+from app.modules.usuarios.router import router as usuarios_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,6 +57,7 @@ app = FastAPI(
 )
 
 app.include_router(health_router)
+app.include_router(usuarios_router)
 app.include_router(editoriales_router)
 app.include_router(generos_router)
 app.include_router(autores_router)

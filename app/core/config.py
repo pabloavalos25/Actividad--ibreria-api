@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     db_max_overflow: int = Field(default=10, ge=0)
     bcrypt_rounds: int = Field(default=12, ge=4, le=31)
     bcrypt_concurrency: int = Field(default=4, ge=1)
+    jwt_ttl_seconds: int = Field(default=1800, ge=1)
+    cookie_secure: bool = False
 
     @computed_field(repr=False)
     @property
