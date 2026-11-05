@@ -1,24 +1,24 @@
 import asyncio
-import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-load_dotenv()
+
+from app.core.config import get_settings
 
 from app.modules.autores.models import Autor
 from app.modules.clientes.models import Cliente, PerfilCliente
 from app.modules.editoriales.models import Editorial
 from app.modules.generos.models import Genero
-from app.modules.libros.models import Libro, LibroAutor
+from app.modules.libros.models import Libro, LibroAutor, MovimientoStock
+from app.modules.usuarios.models import AsignacionRol, EventoSeguridad, IntentoAcceso, Usuario
 from app.modules.ventas.models import RenglonVenta, Venta
 
 config = context.config
@@ -26,9 +26,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-database_url = os.getenv("DATABASE_URL")
-if not database_url:
-    raise RuntimeError("Falta DATABASE_URL: definila en el archivo .env")
+database_url = get_settings().database_url
 config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 target_metadata = SQLModel.metadata

@@ -3,6 +3,7 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+tmp/
 engram-export.json
 # Herramientas de asistencia y planificación (estado local, no forman parte de la entrega)
 .atl/

@@ -1,0 +1,53 @@
+# Casos C-06 y C-07: alta de venta y lecturas con cantidad fija de consultas.
+#
+# Antes de correrlos, dejar la base en el estado inicial:  python seed.py
+# C-06 agrega una venta cada vez que se ejecuta; C-07 solo lee datos del
+# estado inicial, así que todos los casos se pueden repetir.
+
+@base = http://127.0.0.1:8000
+
+### C-06 · Venta válida con dos renglones
+# No viajan el precio, el total ni la fecha: los pone el servidor.
+# Resultado esperado: 201, con los renglones creados, los precios copiados
+# de cada libro y el total calculado (2 x 25000.00 + 1 x 27000.00):
+#   {
+#     "id": <id de la venta nueva>,
+#     "fecha": "<fecha y hora en UTC>",
+#     "total": "77000.00",
+#     "cliente": { "id": 2, "nombre": "Tomás Ríos", "email": "tomas@example.com" },
+#     "renglones": [
+#       { "libro_id": 1, "titulo": "Rayuela", "cantidad": 2,
+#         "precio_unitario": "25000.00", "subtotal": "50000.00" },
+#       { "libro_id": 4, "titulo": "Respiración artificial", "cantidad": 1,
+#         "precio_unitario": "27000.00", "subtotal": "27000.00" }
+#     ]
+#   }
+POST {{base}}/ventas/
+Content-Type: application/json
+
+{
+  "cliente_id": 2,
+  "renglones": [
+    { "libro_id": 1, "cantidad": 2 },
+    { "libro_id": 4, "cantidad": 1 }
+  ]
+}
+
+### C-07 · Detalle de un libro con un autor
+# Arrancar el servidor con ECHO_SQL=true para ver las consultas en la consola.
+# Resultado esperado: 200 y 2 consultas en la consola
+#   (libro con editorial y género; autorías con su autor).
+GET {{base}}/libros/1
+
+### C-07 · Detalle de un libro con dos autores
+# Resultado esperado: 200 y las mismas 2 consultas que con un solo autor.
+GET {{base}}/libros/5
+
+### C-07 · Detalle de una venta con un renglón
+# Resultado esperado: 200 y 2 consultas en la consola
+#   (venta con cliente; renglones con su libro).
+GET {{base}}/ventas/1
+
+### C-07 · Detalle de una venta con dos renglones
+# Resultado esperado: 200 y las mismas 2 consultas que con un solo renglón.
+GET {{base}}/ventas/2

@@ -1,10 +1,13 @@
+import asyncio
 import logging
+import secrets
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from app.core.config import get_settings
 from app.core.database import create_engine_and_factory
+from app.core.security import hash_password
 from app.modules.autores.router import router as autores_router
 from app.modules.clientes.router import router as clientes_router
 from app.modules.editoriales.router import router as editoriales_router
@@ -28,11 +31,21 @@ async def lifespan(app: FastAPI):
     engine, session_factory = create_engine_and_factory(
         database_url=settings.database_url,
         echo=settings.echo_sql,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
     )
     app.state.engine = engine
     app.state.session_factory = session_factory
-    yield
-    await engine.dispose()
+    try:
+        app.state.settings = settings
+        app.state.bcrypt_semaphore = asyncio.Semaphore(settings.bcrypt_concurrency)
+        app.state.dummy_password_hash = await hash_password(
+            secrets.token_urlsafe(32), rounds=settings.bcrypt_rounds,
+            semaphore=app.state.bcrypt_semaphore,
+        )
+        yield
+    finally:
+        await engine.dispose()
 
 
 app = FastAPI(

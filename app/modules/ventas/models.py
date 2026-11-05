@@ -1,11 +1,15 @@
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.modules.clientes.models import Cliente
 from app.modules.libros.models import Libro
+
+if TYPE_CHECKING:
+    from app.modules.libros.models import MovimientoStock
 
 
 def _utcnow() -> datetime:
@@ -24,6 +28,9 @@ class Venta(SQLModel, table=True):
     total: Decimal = Field(max_digits=12, decimal_places=2)
 
     cliente: Cliente = Relationship(back_populates="ventas")
+    movimientos_stock: list['MovimientoStock'] = Relationship(
+        back_populates='venta', sa_relationship_kwargs={'passive_deletes': 'all'},
+    )
     renglones: list["RenglonVenta"] = Relationship(
         back_populates="venta",
         cascade_delete=True,

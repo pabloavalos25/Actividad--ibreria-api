@@ -12,8 +12,12 @@ from sqlalchemy.ext.asyncio import (
 def create_engine_and_factory(
     database_url: str,
     echo: bool = False,
+    pool_size: int = 5,
+    max_overflow: int = 10,
 ) -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
-    engine = create_async_engine(database_url, echo=echo)
+    engine = create_async_engine(
+        database_url, echo=echo, pool_size=pool_size, max_overflow=max_overflow,
+    )
     session_factory = async_sessionmaker(
         bind=engine,
         expire_on_commit=False,

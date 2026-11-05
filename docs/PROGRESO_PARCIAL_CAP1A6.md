@@ -1,0 +1,104 @@
+# Progreso del parcial
+
+Actualizado: 5 de noviembre de 2026. Fuente de requisitos: `Parcial_Cap1a6_Consigna.pdf`; matriz completa en [REQUISITOS_PARCIAL_CAP1A6.md](REQUISITOS_PARCIAL_CAP1A6.md). Configuración y seguridad autorizadas expresamente por el usuario en esta sesión; ver [plan](PLAN_PARCIAL_CAP1A6.md).
+
+Estado actual: **ejercicios 1 y 2 completados**. Ver bloque 2 más abajo para los modelos y migraciones. Conteos actuales: **44 pruebas sin DB y 29 online PostgreSQL**, sin casos omitidos dentro de las suites ejecutadas.
+
+## Bloque 1 implementado
+
+- TP original preservado en `despliegue/` a partir del commit `54c7fa2e362904999e07857636bb97f087877341`, sin `.env`, `.venv` ni `.git`. Su procedencia está documentada. Se mantiene la raíz como parcial para evitar mover archivos durante el desarrollo; se empaquetará como `parcial/` al entregar.
+- Entorno aislado `.venv` operativo, con Python 3.13.12, FastAPI 0.162.0, SQLModel 0.0.24, SQLAlchemy 2.0.57, pydantic-settings 2.16.2, bcrypt 5.0.0 y pytest 9.2.0. Verificados ejecutable y prefix locales. El Python embebido de pgAdmin carece de `venv`; se usó virtualenv temporal, sin instalar paquetes globales. Descargas autorizadas fuera del sandbox; se restauró herencia de permisos únicamente en `.venv/Lib/site-packages` para permitir imports del sandbox.
+- `Settings` con variables PostgreSQL separadas, URL calculada con escape correcto, secretos obligatorios y configuración de pool/bcrypt. `migrations/env.py` usa la misma configuración. El seed sigue usando `get_settings` y la fábrica compatibles, pero aún no tiene los datos nuevos del parcial.
+- Lifespan crea recursos sin conectar, configura pool, prepara semáforo y hash ficticio una vez, y libera motor en `finally` incluso ante errores de inicialización o ejecución.
+- Hash bcrypt fuera del bucle mediante `to_thread`, costo configurable y límite de concurrencia que conserva el cupo hasta finalizar el hilo aun si la coroutine se cancela repetidamente.
+- Health y sesiones conservan su comportamiento comprobado: live sin DB, ready con SELECT 1 y 503 propio, sesión por petición con cierre y sin expiración al commit.
+
+## Decisiones del bloque
+
+Los nombres `JWT_SECRET`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`, `BCRYPT_ROUNDS` y `BCRYPT_CONCURRENCY` son elecciones del proyecto: la consigna no fija esos nombres ni sus valores. Se eligen defaults no secretos 5/10 para pool y 12/4 para bcrypt; están expuestos en `env.example`. Los tests reducen bcrypt a costo 4/5 sin cambiar el default de ejecución.
+
+Se mantiene `ECHO_SQL` como alias de compatibilidad y se documenta `SQL_ECHO` como nombre principal. Settings ignora claves ajenas del archivo de entorno, pero **no utiliza DATABASE_URL como reemplazo de POSTGRES_***: sin los secretos obligatorios no arranca. No se registran Settings ni la URL calculada.
+
+`env.example` tiene contraseña y clave JWT vacías. El `.env` real no se modificó. Para arrancar el parcial hay que completar manualmente las nuevas variables según README.
+
+## TDD Cycle Evidence
+
+No existía suite automatizada: únicamente archivos HTTP del TP. Antes de cambiar producción se agregaron y ejecutaron 7 caracterizaciones, todas verdes. Los casos HTTP que requieren PostgreSQL no se ejecutaron en este bloque.
+
+| Tarea | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| Configuración Settings | `test/test_config.py` | Unidad | 7/7 caracterizaciones | TypeError por Settings antigua sin `_env_file` | Confirmado | 14 casos: URL, secretos ausentes/vacíos, rangos, defaults, archivo/entorno | Suite verde; sin refactor de producción adicional |
+| Pool configurable | `test/test_database.py` | Integración sin conexión | 21/21 | TypeError por `pool_size` inexistente | Confirmado | 2 configuraciones de pool | Suite verde; sin refactor adicional |
+| Hash ficticio bcrypt | `test/test_security.py` | Unidad + bcrypt real | 23/23 | Módulo `app.core.security` inexistente | Confirmado | 2 contraseñas/costos y 2 límites de concurrencia | Suite verde; sin refactor adicional |
+| Lifespan | `test/test_lifespan.py` | Integración ASGI + unidad | 27/27 | Hash/función no existentes en lifespan | Confirmado | 5 casos: arranque/pool, fallo hash/petición y 2 secretos ausentes | Limpieza centralizada en finally; suite verde |
+| Configuración Alembic | `test/test_migration_config.py` | Subproceso CLI offline | 30/30 antes de editar env.py | Configuración vieja exige DATABASE_URL | Confirmado | 2 casos: SQL generado y JWT ausente | Suite verde; sin refactor adicional |
+| Cancelación bcrypt | `test/test_security.py` | Unidad concurrente | 32/32 | Segundo hash entraba mientras seguía el hilo cancelado | Confirmado | 2 casos: cancelación simple y doble | Suite verde; mantiene semáforo hasta terminar worker |
+| Health/sesiones existentes | `test/test_core_baseline.py` | ASGI + unidad | 7/7 inicial | No se cambió comportamiento | Confirmado | Live, ready disponible/caída, sesiones normal/error, fábrica/lifespan | Se conservan verdes |
+
+Los números Safety Net reflejan las ejecuciones previas a cada modificación, no una dependencia entre ejercicios. Se corrigieron dos aserciones del propio test que buscaban una cadena vacía dentro del error; no fue un defecto de producción. El temporal global de pytest no era accesible, por lo que `pytest.ini` fija `tmp/pytest` dentro del proyecto.
+
+## Verificación y alcance del bloque 1 (histórico)
+
+Comando principal: `& ./.venv/Scripts/python.exe -m pytest -q` → **36 passed**. Incluye generación SQL offline real de las migraciones existentes con contraseña ficticia con caracteres especiales, en un subproceso con directorio temporal y sin lectura del `.env` real.
+
+Verificación final: suite 36/36 en 2.90 s; revisión independiente 36/36 en 2.87 s. `python -m pip check`: sin dependencias rotas. Importar `seed` y `app.main` funciona sin ejecutar la carga de datos. `git diff --check`: sin errores de espacios (solo avisos normales LF/CRLF). Los 55 archivos extraídos en `despliegue/` coinciden byte por byte con el archivo generado por `git archive`; únicamente se agregó `PROCEDENCIA.md`.
+
+Durante el bloque 1 no se conectó a PostgreSQL, no se ejecutó seed, no se aplicaron migraciones online y no se desplegó al VPS. La verificación online de migraciones se realizó después, en el bloque 2 documentado abajo. Los casos C nuevos y los casos D completos siguen pendientes. El helper bcrypt no incorpora todavía endpoints, emisión/verificación JWT ni autorización.
+
+## Bloque 2 — modelos, relaciones y migraciones
+
+Implementado tras el pedido «Sigamos», manteniendo la autorización de configuración/seguridad ya otorgada.
+
+- Nuevos modelos `Usuario`, `AsignacionRol`, `IntentoAcceso`, `EventoSeguridad` y `MovimientoStock`, en los módulos exigidos. Las nuevas fechas son `timestamptz`, con defaults UTC cuando corresponde. Intentos y eventos no tienen relaciones ni FK.
+- `Cliente.usuario_id` es nullable, UNIQUE e indexado; `Cliente.usuario` y su reversa `Usuario.cliente` son escalares opcionales. Se conserva la unicidad de email.
+- Libro conserva precio Decimal, CHECK precio/stock y todas sus relaciones; agrega `borrado_en` y el índice único parcial de ISBN vigente, reemplazando el UNIQUE común.
+- Asignaciones tienen CHECK de roles e índice único parcial de usuario/rol no revocado. Un rol vencido aún abierto sigue bloqueando otro hasta revocarlo. `otorgada_por` se interpreta como FK opcional al usuario otorgante, decisión coherente con su significado y documentada aquí; se diferencia del titular con `foreign_keys` en ambos extremos. Todas las nuevas FK están indexadas. No se agregaron CHECK de fechas ni reglas adicionales ajenas a la consigna.
+- Movimientos permiten cantidades positivas y negativas, rechazan cero y tienen navegación bilateral con libro, usuario y venta opcional. Las relaciones de historial no borran movimientos ni asignaciones en cascada.
+- Revisión **3e5d56535b0e** realmente generada con `alembic revision --autogenerate -m acceso_y_movimientos_stock`, contra un PostgreSQL 17 aislado con las dos migraciones del TP. Se leyó antes de aplicar y se dejó comentario de revisión. Correcciones necesarias: AutoString sin import del generador se cambió por `sa.String` equivalente; se nombró la FK de cliente para corregir `drop_constraint(None)` del downgrade. Se verificó drop del UNIQUE ISBN anterior y creación del parcial con predicado real.
+- Revisión **a05a50bc58a8**, escrita a mano: función y trigger BEFORE UPDATE/DELETE que rechazan cambios incluso por SQL directo (SQLSTATE 23514). INSERT continúa permitido. Downgrade elimina primero trigger y luego función. Comentario documenta revisión previa.
+- Se registraron explícitamente todos los modelos en `migrations/env.py`. `import app.main, seed; configure_mappers()` pasó en proceso fresco, sin ejecutar seed.
+
+### TDD Cycle Evidence — ejercicio 2
+
+| Tarea | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| Grafo de modelos y relaciones | `test/test_models.py` | Unidad ORM | 36/36 inicial | ImportError: MovimientoStock inexistente | 8/8 | 2 vínculos cliente, 2 roles, movimientos con/sin venta y 2 intentos | Optional en relaciones, 44/44 verdes |
+| Revisión 3, restricciones e índices parciales | `postgres_tests/test_constraints.py` | PostgreSQL real | Esquema TP online y alembic check sin drift | 12 fallos por tablas/columnas nuevas ausentes | Confirmado tras migración autogenerada revisada | 23 casos finales: unicidad/FK/CHECK/ISBN y fechas con 2 offsets | Sin cambio de comportamiento; suite verde |
+| Trigger de sólo agregado | `postgres_tests/test_append_only.py` | SQL directo PostgreSQL | 12/12 online previos | 4 fallos: UPDATE/DELETE no eran rechazados | 4/4 | UPDATE y DELETE, cada uno con movimiento positivo/negativo | Suite verde |
+| Persistencia y navegación histórica | `postgres_tests/test_relationships.py` | ORM + PostgreSQL real | Restricciones/trigger verdes | Cubiertos por RED del modelo/esquema anterior | 2/2 | Con venta y sin venta; lectura precargada tras baja del libro | Sin refactor adicional |
+
+En los tests de apoyo se corrigieron dos errores de fixture antes de confirmar RED de esquema: `force_rollback` no es argumento de asyncpg.Transaction; se reemplazó por start/rollback explícitos. La editorial de prueba también necesitaba el `pais` obligatorio del TP. No se cambiaron restricciones de producción para hacer pasar fixtures.
+
+### Verificación online reproducible
+
+Se creó un cluster **propio** dentro de `tmp/postgres-ej2/data`, ligado exclusivamente a `127.0.0.1:10628`, con usuario/base de pruebas y sin utilizar credenciales del `.env`. Antes de usarlo se comprobó `SHOW data_directory`. La base `parcial_ej2` recibió las dos revisiones previas como baseline; autogenerate detectó sólo los cambios esperados.
+
+Resultados coordinados después del ciclo completo `head → base → head`:
+
+- Suite sin DB: **44 passed in 5.35s**. Revisión independiente: **44 passed in 6.40s**.
+- Suite PostgreSQL: **29 passed in 2.69s**. Revisión independiente: **29 passed in 2.58s**.
+- `alembic check`: **No new upgrade operations detected**, antes y después del ciclo.
+- Las pruebas ejercitan en la base el ISBN reciclado, rechazo de reactivación conflictiva, roles abiertos/vencidos/revocados, las seis nuevas FK, checks originales, fechas con zona, persistencia y lectura de relaciones y rechazo de UPDATE/DELETE aun si UPDATE no cambia el valor.
+
+`scripts/test_postgres.py` repite desde cero la creación de un cluster nuevo en `tmp/`, usa puerto libre distinto de 5432, verifica ownership/directorio, ejecuta `upgrade head → check → downgrade base → upgrade head → check`, valida que base no deje tablas de dominio ni función del trigger, ejecuta las 29 pruebas online y apaga sólo su propio servidor en `finally`. No acepta URLs o datos de un cluster existente. Las suites online requieren configuración explícita y fallan si falta o no hay conexión; no hacen skip.
+
+El fresh-run final verificado creó `tmp/postgres-tests-5f79da9ca16f`, puerto **52783**: cuatro revisiones desde base vacía, downgrade sin tablas/función remanentes, nuevo upgrade, comparación sin drift, **29 passed in 2.22s**, y **server stopped** al terminar. Los logs completos quedan en `verification.log` y `server.log` de esa carpeta ignorada. Hubo un aviso de permisos de caché pytest; el runner ahora dirige también su caché a su propio temporal.
+
+Particularidades de esta sesión Windows/Codex: initdb no pudo ejecutarse con el token restringido del sandbox, por lo que initdb/pg_ctl requirieron escalación explícita. El launcher `.venv` elevado tuvo un fallo nativo al importar asyncpg; se usó el Python base de pgAdmin con **lectura** de dependencias `.venv/Lib/site-packages` mediante sys.path, sin modificar el entorno global. Cada hijo del runner recibe ese bootstrap porque el Python embebido ignora PYTHONPATH. Comando exacto equivalente reproducible en README. El primer intento del runner quedó esperando un PIPE heredado por el servidor; se detuvo su cluster de puerto33873 y se corrigió a logs de archivo. No se reutilizó ese cluster para fingir éxito.
+
+Los clusters propios de puertos **10628, 33873 y 52783 quedaron detenidos**. Los datos temporales y logs se conservan ignorados en `tmp/`; no se eliminó ni modificó ningún servicio, directorio de datos o base ajenos al task. `despliegue/` y el `.env` real no se modificaron; no se ejecutó seed. La evidencia ampliada está en [ej2_migraciones.md](../evidencia/ej2_migraciones.md).
+
+Cierre verificado: `pg_ctl status` devolvió **no server running** para las tres rutas propias; `git diff --check` no informó errores (sólo avisos LF/CRLF); los 55 archivos del TP preservado siguen sin cambios respecto del archivo de `git archive` original.
+
+El downgrade restaura el UNIQUE global de ISBN del TP: si se intentara bajar sobre datos que ya reutilizaron ISBN, habría que resolver ese conflicto antes. El ciclo exigido se verificó sobre la base de pruebas limpia, sin inventar una política de borrado de datos.
+
+## Siguiente bloque
+
+Ejercicio 3: contratos estrictos, respuestas y paginación. Coordinar sus escrituras con los próximos repositorios/UoW y acceso/stock, sin anticipar autenticación ni lógica de negocio en el bloque de modelos. Seguir el plan; autorizaciones HIGH/CRITICAL ya otorgadas no deben solicitarse de nuevo para el mismo alcance.
+
+Quedan pendientes repositorios/UoW, contratos/paginación, autenticación y autorización completas, stock/ventas atómicas, seed nuevo, archivos HTTP C-01 a C-16, evidencias C-14/C-15 y Docker/VPS D-01 a D-08. El CLI y skills OpenSpec no están disponibles; no se inventó estado ni estructura OPSX.
+
+## Documentación consultada
+
+- Context7: pydantic-settings (BaseSettings, SettingsConfigDict), FastAPI (lifespan/TestClient), SQLAlchemy (URL.create, pool, sesiones asincrónicas).
+- [bcrypt oficial](https://github.com/pyca/bcrypt): hashpw, gensalt y costo configurable.

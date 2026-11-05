@@ -1,21 +1,43 @@
-import os
-from dataclasses import dataclass
 from functools import lru_cache
 
-from dotenv import load_dotenv
+from pydantic import AliasChoices, Field, SecretStr, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import URL
 
 
-@dataclass(frozen=True)
-class Settings:
-    database_url: str
-    echo_sql: bool
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file='.env', env_file_encoding='utf-8', extra='ignore',
+        hide_input_in_errors=True,
+    )
+
+    postgres_user: str = Field(min_length=1)
+    postgres_password: SecretStr = Field(min_length=1)
+    postgres_db: str = Field(min_length=1)
+    postgres_host: str = Field(min_length=1)
+    postgres_port: int = Field(default=5432, ge=1, le=65535)
+    jwt_secret: SecretStr = Field(min_length=1)
+    echo_sql: bool = Field(
+        default=False, validation_alias=AliasChoices('SQL_ECHO', 'ECHO_SQL'),
+    )
+    db_pool_size: int = Field(default=5, ge=1)
+    db_max_overflow: int = Field(default=10, ge=0)
+    bcrypt_rounds: int = Field(default=12, ge=4, le=31)
+    bcrypt_concurrency: int = Field(default=4, ge=1)
+
+    @computed_field(repr=False)
+    @property
+    def database_url(self) -> str:
+        return URL.create(
+            'postgresql+asyncpg',
+            username=self.postgres_user,
+            password=self.postgres_password.get_secret_value(),
+            host=self.postgres_host,
+            port=self.postgres_port,
+            database=self.postgres_db,
+        ).render_as_string(hide_password=False)
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    load_dotenv()
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        raise RuntimeError("Falta DATABASE_URL: definila en el archivo .env")
-    echo_sql = os.getenv("ECHO_SQL", "false").strip().lower() in {"1", "true", "yes"}
-    return Settings(database_url=database_url, echo_sql=echo_sql)
+    return Settings()
