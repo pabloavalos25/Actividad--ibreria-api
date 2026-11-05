@@ -8,7 +8,7 @@ import bcrypt
 import httpx
 import jwt
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter, Depends
 from sqlalchemy import select, func, text
 from sqlalchemy.engine import URL
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -21,7 +21,8 @@ from app.modules.editoriales.models import Editorial
 from app.modules.generos.models import Genero
 from app.modules.autores.models import Autor
 from app.modules.usuarios.router import router
-from app.modules.libros.router import router as libros_router
+from app.modules.libros.router import public_router as libros_publico, protected_router as libros_protegido
+from app.core.dependencies import verificar_cambio_obligatorio
 
 
 @asynccontextmanager
@@ -30,7 +31,9 @@ async def api(config):
                    host=config['host'],port=config['port'],database=config['database'])
     engine=create_async_engine(url)
     factory=async_sessionmaker(engine,expire_on_commit=False)
-    app=FastAPI(); app.include_router(router); app.include_router(libros_router)
+    app=FastAPI(); app.include_router(router); app.include_router(libros_publico)
+    protegido=APIRouter(dependencies=[Depends(verificar_cambio_obligatorio)])
+    protegido.include_router(libros_protegido); app.include_router(protegido)
     app.state.session_factory=factory
     app.state.settings=Settings(_env_file=None,postgres_user='test',postgres_password='test',postgres_host='localhost',
         postgres_db='test',jwt_secret='test-signature-longer-than-32-bytes-for-auth',bcrypt_rounds=4)
@@ -45,7 +48,7 @@ async def api(config):
         async with engine.begin() as connection:
             assert Path(await connection.scalar(text('SHOW data_directory'))).resolve()==Path(config['data_directory']).resolve()
             assert await connection.scalar(select(func.current_database()))==config['database']
-            await connection.execute(text('TRUNCATE usuario, cliente, libro, editorial, intento_acceso, evento_seguridad RESTART IDENTITY CASCADE'))
+            await connection.execute(text('TRUNCATE usuario, cliente, libro, editorial, autor, genero, intento_acceso, evento_seguridad RESTART IDENTITY CASCADE'))
         await engine.dispose()
 
 

@@ -25,9 +25,27 @@ async def get_sesion_actual(request: Request, session=Depends(get_session)):
     return usuario, claims
 
 
-async def requerir_usuario_id(actual=Depends(get_sesion_actual), session=Depends(get_session)) -> int:
-    usuario, _ = actual
-    roles = await UsuarioRepository(session).roles_vigentes(usuario.id, ahora_utc())
-    if usuario.debe_cambiar_password or 'ADMIN' not in roles:
-        raise HTTPException(403, 'No tiene permiso para realizar esta operación')
+async def get_usuario_actual(actual=Depends(get_sesion_actual)):
+    return actual[0]
+
+
+def requiere_rol(*permitidos):
+    async def comprobar(usuario=Depends(get_usuario_actual), session=Depends(get_session)):
+        roles = await UsuarioRepository(session).roles_vigentes(usuario.id, ahora_utc())
+        if not set(roles).intersection(permitidos):
+            raise HTTPException(403, 'No tiene permiso para realizar esta operación')
+        return usuario
+    return comprobar
+
+
+requiere_admin = requiere_rol('ADMIN')
+requiere_personal = requiere_rol('ADMIN', 'VENDEDOR')
+
+
+async def verificar_cambio_obligatorio(usuario=Depends(get_usuario_actual)):
+    if usuario.debe_cambiar_password:
+        raise HTTPException(403, 'Debe cambiar su contraseña')
+
+
+async def requerir_usuario_id(usuario=Depends(requiere_admin)) -> int:
     return usuario.id

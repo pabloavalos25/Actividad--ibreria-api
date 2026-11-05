@@ -8,17 +8,23 @@ from fastapi.testclient import TestClient
 from importlib import import_module
 from app.modules.usuarios.models import Usuario
 from app.core.database import get_session
+from app.core.dependencies import requiere_admin, requiere_personal, get_usuario_actual
 
 LISTADOS = ['/libros/', '/editoriales/', '/generos/', '/ventas/',
             '/autores/1/libros', '/clientes/1/ventas',
             '/editoriales/1/libros', '/generos/1/libros']
 
 
-def cliente(session):
+def cliente(session, personal=True):
     app = FastAPI()
     for module in ["autores", "clientes", "editoriales", "generos", "libros", "ventas"]:
         app.include_router(import_module(f"app.modules.{module}.router").router)
     app.dependency_overrides[get_session] = lambda: session
+    if personal:
+        actor = SimpleNamespace(id=1, debe_cambiar_password=False)
+        app.dependency_overrides[requiere_admin] = lambda: actor
+        app.dependency_overrides[requiere_personal] = lambda: actor
+        app.dependency_overrides[get_usuario_actual] = lambda: actor
     return TestClient(app)
 
 

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
 from app.core.database import get_session
 from app.core.dependencies import requerir_usuario_id
+from app.core.dependencies import requiere_admin, requiere_personal, get_usuario_actual
 from app.modules.usuarios.models import Usuario
 from app.modules.ventas.models import Venta
 from app.modules.editoriales.models import Editorial
@@ -36,6 +37,12 @@ async def api(config):
                     app.include_router(import_module(f'app.modules.{name}.router').router)
                 app.dependency_overrides[get_session]=lambda:session
                 app.dependency_overrides[requerir_usuario_id]=lambda:user.id
+                app.dependency_overrides[requiere_admin]=lambda:user
+                app.dependency_overrides[requiere_personal]=lambda:user
+                app.dependency_overrides[get_usuario_actual]=lambda:user
+                from app.modules.usuarios.models import AsignacionRol
+                session.add(AsignacionRol(usuario_id=user.id, rol='ADMIN'))
+                await session.commit()
                 async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as client:
                     yield client,session,editorial.id,user.id
             await transaction.rollback()

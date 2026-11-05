@@ -3,8 +3,42 @@ from app.core.dependencies import get_uow, get_sesion_actual
 from app.core.security import create_token
 from app.modules.usuarios import service
 from app.modules.usuarios.schemas import Registro, Login, CambiarPassword, UsuarioRead, LoginRead, SesionRead
+from typing import Annotated
+from fastapi import Path, Query
+from sqlalchemy import select
+from app.core.paginacion import paginar, Pagina
+from app.modules.usuarios.models import EventoSeguridad
+from app.core.dependencies import requiere_admin
+from app.modules.usuarios.schemas import PersonalCreate, RolCreate, RolRead, Rol, EventoRead
 
 router = APIRouter(prefix='/auth', tags=['acceso'])
+admin_router = APIRouter(tags=['usuarios'], dependencies=[Depends(requiere_admin)])
+
+
+@admin_router.post('/usuarios', response_model=UsuarioRead, status_code=201)
+async def crear_personal(datos: PersonalCreate, request: Request, actor=Depends(requiere_admin), uow=Depends(get_uow)):
+    actor_id = actor.id
+    return await service.crear_personal(uow, actor_id, datos, request.app.state.settings, request.app.state.bcrypt_semaphore)
+
+
+@admin_router.get('/usuarios/{usuario_id}/roles', response_model=list[RolRead])
+async def roles_usuario(usuario_id: Annotated[int, Path(gt=0, le=2147483647)], uow=Depends(get_uow)):
+    return await service.listar_roles(uow, usuario_id)
+
+
+@admin_router.post('/usuarios/{usuario_id}/roles', response_model=RolRead, status_code=201)
+async def asignar_rol(usuario_id: Annotated[int, Path(gt=0, le=2147483647)], datos: RolCreate, actor=Depends(requiere_admin), uow=Depends(get_uow)):
+    return await service.asignar_rol(uow, actor.id, usuario_id, datos)
+
+
+@admin_router.delete('/usuarios/{usuario_id}/roles/{rol}')
+async def revocar_rol(usuario_id: Annotated[int, Path(gt=0, le=2147483647)], rol: Rol, actor=Depends(requiere_admin), uow=Depends(get_uow)):
+    return await service.revocar_rol(uow, actor.id, usuario_id, rol)
+
+
+@admin_router.get('/eventos', response_model=Pagina[EventoRead])
+async def listar_eventos(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), uow=Depends(get_uow)):
+    return await paginar(uow.session, select(EventoSeguridad).order_by(EventoSeguridad.id), page, size)
 
 
 @router.post('/registro', response_model=UsuarioRead, status_code=201)

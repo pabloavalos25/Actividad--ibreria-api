@@ -1,6 +1,7 @@
-from typing import Annotated
+from typing import Annotated, Literal
+from datetime import datetime, timezone
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, AfterValidator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, AfterValidator, field_validator
 
 
 def limite_bytes(value: str) -> str:
@@ -52,3 +53,44 @@ class SesionRead(BaseModel):
     usuario: UsuarioRead
     roles_vigentes: list[str]
     roles_token: list[str]
+
+
+Rol = Literal['ADMIN', 'VENDEDOR', 'CLIENTE']
+
+
+class PersonalCreate(Entrada):
+    nombre: str = Field(min_length=1, max_length=100)
+    email: EmailStr = Field(max_length=255)
+    password_provisoria: NuevaPassword
+    rol: Literal['ADMIN', 'VENDEDOR']
+
+
+class RolCreate(Entrada):
+    rol: Rol
+    vence_en: datetime | None = None
+
+    @field_validator('vence_en')
+    @classmethod
+    def vencimiento_futuro(cls, value):
+        if value is not None and (value.utcoffset() is None or value <= datetime.now(timezone.utc)):
+            raise ValueError('El vencimiento debe tener zona horaria y ser futuro')
+        return value
+
+
+class RolRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    usuario_id: int
+    rol: str
+    desde: datetime
+    vence_en: datetime | None
+    revocada_en: datetime | None
+    otorgada_por: int | None
+
+
+class EventoRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    cuando: datetime
+    actor: str
+    accion: str

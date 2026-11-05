@@ -1,3 +1,4 @@
+from app.core.dependencies import requiere_admin, requiere_personal, get_usuario_actual
 from typing import Annotated
 from fastapi import Path
 from app.core.paginacion import Pagina
@@ -14,10 +15,12 @@ from app.modules.editoriales.schemas import (
 from app.modules.libros import service as libros_service
 from app.modules.libros.schemas import LibroRead
 
-router = APIRouter(prefix="/editoriales", tags=["editoriales"])
+public_router = APIRouter(prefix="/editoriales", tags=["editoriales"])
+protected_router = APIRouter(prefix="/editoriales", tags=["editoriales"])
 
 
-@router.post("/", response_model=EditorialRead, status_code=201)
+
+@protected_router.post("/", response_model=EditorialRead, status_code=201, dependencies=[Depends(requiere_admin)])
 async def crear_editorial(
     datos: EditorialCreate,
     session: AsyncSession = Depends(get_session),
@@ -26,7 +29,7 @@ async def crear_editorial(
     return EditorialRead.model_validate(editorial, from_attributes=True)
 
 
-@router.get("/", response_model=Pagina[EditorialRead])
+@public_router.get("/", response_model=Pagina[EditorialRead])
 async def listar_editoriales(
     size: int = Query(20, ge=1, le=100),
     page: int = Query(1, ge=1),
@@ -37,7 +40,7 @@ async def listar_editoriales(
     return editoriales
 
 
-@router.get("/{editorial_id}", response_model=EditorialRead)
+@public_router.get("/{editorial_id}", response_model=EditorialRead)
 async def obtener_editorial(
     editorial_id: Annotated[int, Path(gt=0, le=2147483647)],
     session: AsyncSession = Depends(get_session),
@@ -46,7 +49,7 @@ async def obtener_editorial(
     return EditorialRead.model_validate(editorial, from_attributes=True)
 
 
-@router.patch("/{editorial_id}", response_model=EditorialRead)
+@protected_router.patch("/{editorial_id}", response_model=EditorialRead, dependencies=[Depends(requiere_admin)])
 async def actualizar_editorial(
     editorial_id: Annotated[int, Path(gt=0, le=2147483647)],
     datos: EditorialUpdate,
@@ -56,7 +59,7 @@ async def actualizar_editorial(
     return EditorialRead.model_validate(editorial, from_attributes=True)
 
 
-@router.get("/{editorial_id}/libros", response_model=Pagina[LibroRead])
+@public_router.get("/{editorial_id}/libros", response_model=Pagina[LibroRead])
 async def listar_libros_de_editorial(
     editorial_id: Annotated[int, Path(gt=0, le=2147483647)],
     size: int = Query(20, ge=1, le=100),
@@ -68,3 +71,8 @@ async def listar_libros_de_editorial(
     )
     libros["items"] = [LibroRead.model_validate(libro, from_attributes=True) for libro in libros["items"]]
     return libros
+
+
+router = APIRouter()
+router.include_router(public_router)
+router.include_router(protected_router)

@@ -3,7 +3,8 @@ import logging
 import secrets
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter, Depends
+from app.core.dependencies import verificar_cambio_obligatorio
 
 from app.core.config import get_settings
 from app.core.database import create_engine_and_factory
@@ -56,11 +57,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.include_router(health_router)
-app.include_router(usuarios_router)
-app.include_router(editoriales_router)
-app.include_router(generos_router)
-app.include_router(autores_router)
-app.include_router(libros_router)
-app.include_router(clientes_router)
-app.include_router(ventas_router)
+public_routes = APIRouter()
+protected_routes = APIRouter(dependencies=[Depends(verificar_cambio_obligatorio)])
+public_routes.include_router(health_router)
+public_routes.include_router(usuarios_router)
+from app.modules.usuarios.router import admin_router
+protected_routes.include_router(admin_router)
+from app.modules.ventas.router import mis_ventas_router
+protected_routes.include_router(mis_ventas_router)
+from importlib import import_module
+for nombre in ('editoriales', 'generos', 'autores', 'libros', 'clientes', 'ventas'):
+    modulo = import_module(f'app.modules.{nombre}.router')
+    public_routes.include_router(modulo.public_router)
+    protected_routes.include_router(modulo.protected_router)
+app.include_router(public_routes)
+app.include_router(protected_routes)

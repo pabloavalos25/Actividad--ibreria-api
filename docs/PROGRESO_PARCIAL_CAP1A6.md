@@ -2,7 +2,7 @@
 
 Actualizado: 5 de noviembre de 2026. Fuente de requisitos: `Parcial_Cap1a6_Consigna.pdf`; matriz completa en [REQUISITOS_PARCIAL_CAP1A6.md](REQUISITOS_PARCIAL_CAP1A6.md). Configuración y seguridad autorizadas expresamente por el usuario en esta sesión; ver [plan](PLAN_PARCIAL_CAP1A6.md).
 
-Estado actual: **ejercicios 1 a 4 implementados**; las secciones cronológicas conservan los resultados de cada bloque. Conteos actuales: **179 pruebas sin DB y 55 online PostgreSQL**, sin casos omitidos dentro de las suites ejecutadas. Sigue el ejercicio 5 (autorización completa).
+Estado actual: **ejercicios 1 a 5 implementados**; las secciones cronológicas conservan los resultados de cada bloque. Conteos actuales: **213 pruebas sin DB y 71 online PostgreSQL**, sin casos omitidos dentro de las suites ejecutadas. Sigue el ejercicio 6 (repositorios/UoW y stock).
 
 ## Bloque 1 implementado
 
@@ -185,3 +185,38 @@ Archivo local: `openspec/changes/archive/2026-11-05-ejercicio-3-contratos-crud-p
 ### Archivo OPSX del ejercicio 4 (5 de noviembre de 2026)
 
 Por pedido explícito del usuario, se archivó `ejercicio-4-autenticacion` con las cuatro tareas completas y validación estricta aprobada. La CLI sincronizó seis requisitos en la nueva especificación `openspec/specs/autenticacion/spec.md` y creó `openspec/changes/archive/2026-11-05-ejercicio-4-autenticacion/`. Se verificó que el contenido sincronizado conserva propósito, requisitos y escenarios del delta. `openspec validate --specs --strict`: **3 passed, 0 failed**; `openspec list --json`: sin cambios activos. Se reutiliza la verificación inmediata de **179 pruebas sin DB y 55 PostgreSQL**, sin presentarla como otra ejecución. El ejercicio 5 y los demás pendientes indicados arriba siguen abiertos; el alta de libros ya utiliza autenticación y ADMIN vigente implementados en el ejercicio 4. Los artefactos OpenSpec siguen locales e ignorados por la política existente de Git.
+
+## Ejercicio 5 — roles, permisos y propiedad (5 de noviembre de 2026)
+
+Implementado en `master`, sin archive, commit ni push. OpenSpec: `ejercicio-5-roles-permisos`, propuesta/spec/diseño y cuatro tareas. Gobernanza CRITICAL previamente aprobada en el plan; sin UI (`Decision: no (no UI)`). No se modificaron `.env` real, `despliegue/`, modelos o migraciones.
+
+- Alta de personal ADMIN/VENDEDOR con contraseña provisoria y cambio obligatorio, asignación con otorgante y evento en la misma transacción. Bcrypt se calcula antes de abrir escritura; se finaliza lectura de autenticación y se revalida ADMIN antes de persistir.
+- Historial de roles completo; rol vigente repetido 409; reasignación vencida cierra fila anterior antes de crear otra. Vencimiento sin zona/pasado 422; autorrevocación ADMIN y ausencia de otro ADMIN vigente 409. Los controles son secuenciales, conforme a la exclusión de concurrencia del capítulo 7.
+- Dos grupos de rutas en `main.py`, público y protegido. El control de cambio obligatorio está montado una única vez en el protegido. `requiere_rol` consulta DB en cada petición; no utiliza los roles informativos del token. Usuario actual, dependencias y UoW comparten sesión de petición.
+- Escrituras de catálogo y administración sólo ADMIN; clientes/perfiles y registro/listado de ventas ADMIN o VENDEDOR. Los detalles adicionales existentes de autor/editorial permanecen públicos porque sólo exponen catálogo. No se agregaron todavía reposición ni consulta de movimientos del bloque de stock.
+- `/mis-ventas` requiere sólo autenticación y filtra por `Cliente.usuario_id`; detalle de venta para personal vigente o dueño, incluso si ya no conserva rol CLIENTE. Tercero 403, inexistente 404. El cambio obligatorio bloquea ambos; `/auth` y catálogo siguen accesibles.
+- `/eventos` paginado sólo ADMIN. Alta personal, asignación y revocación de roles registran evento dentro del mismo UoW; cambio de contraseña conserva la atomicidad del ejercicio 4. Seed agrega `SISTEMA` / `Carga de los datos iniciales` antes del commit. La carga ampliada de usuarios/roles/movimientos del ejercicio 8 permanece pendiente.
+
+### TDD Cycle Evidence
+
+Baseline ejecutada antes de producción: **179 passed in 9.27s**. Primera suite PG del bloque: 63/63 conservó las 55 previas, con 8 nuevos casos administrativos. El runner siempre utilizó un clúster nuevo propio; las comprobaciones de migraciones siguieron sin drift.
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| DTO personal/roles | `test/test_roles_contracts.py` | DTO | 179/179 | import PersonalCreate inexistente | 9/9 | dos roles personal, fechas sin zona/pasadas/futuras, extras | Verde |
+| Administración e historial | `postgres_tests/test_roles.py` | ASGI/PostgreSQL | 55 previas conservadas | admin_router inexistente | 8 casos nuevos, 63 total | ADMIN/VENDEDOR, vencido/revocado, duplicado y rollback evento | Verde |
+| Matriz y grupos | `test/test_permission_routes.py` | HTTP | 179/179 inicial | 21 rutas fallaron; después sólo mis-ventas404 | 21/21 | escrituras, privados, administración sin cookie | Verde |
+| Propiedad/cambio obligatorio | `postgres_tests/test_roles.py` | ASGI/PostgreSQL | 63 PG | mis-ventas404; 4 casos fallaron | 67/67 total | dueño sin rol, personal, tercero, revocación misma cookie, cambio flag | Verde |
+| Invariante ADMIN | `test/test_admin_invariants.py` | Servicio | Suites verdes | triangulación del bloque administrativo | 2/2 | cero/uno administradores restantes; sin escrituras en rechazo | Verde |
+| Seed auditado | `test/test_seed_audit.py` | Unidad | 209/209 | 2 fallos: ningún evento | 2/2 | commit exitoso/fallido | Verde |
+| Eventos y seed real | `postgres_tests/test_roles.py` | ASGI/PostgreSQL | 67/67 | extensión de escenarios del bloque | 4 adicionales, 71 total | ADMIN/VENDEDOR, última página/422, seed éxito/rollback | Verde |
+
+Las fixtures CRUD anteriores ahora conceden explícitamente personal para probar contratos existentes; las pruebas nuevas de seguridad usan cookies y usuarios DB reales, sin esos overrides. El primer RED de matriz necesitó corregir una fixture que carecía de sesión (se sustituyó la sesión, sin añadir autenticación ficticia). La ampliación de limpieza del fixture auth incluye autores/géneros que el seed de pruebas carga; valida directorio/base del clúster antes del TRUNCATE. No se ejecutó seed sobre ninguna base ajena.
+
+Verificación final: **213 passed in 8.79s** sin DB; **71 passed in 20.96s** PostgreSQL. Clúster final `tmp/postgres-tests-654473165456`, puerto **55725**, detenido por el runner. `upgrade head → downgrade base → upgrade head` y `alembic check` sin diferencias; logs ignorados `verification.log`/`server.log` en esa carpeta. Los clústeres de intentos previos también fueron detenidos por `finally`. `git diff --check` sin errores. Revisión independiente de permisos sin bloqueantes; se eliminó el control redundante de cambio obligatorio en el adaptador del actor de libro.
+
+Sigue el ejercicio 6: base de repositorios/UoW y conversión de los CRUD anteriores, punto único de stock, reposición y ventas atómicas. Después, integridad/evidencias y seed ampliado/casos HTTP según los ejercicios 7 y 8. Los artefactos OpenSpec siguen locales e ignorados por Git.
+
+### Archivo OpenSpec del ejercicio 5
+
+Por pedido explícito del usuario, se archivó `ejercicio-5-roles-permisos` con cuatro tareas completas y validación estricta aprobada. La CLI sincronizó seis requisitos en `openspec/specs/autorizacion/spec.md` y creó `openspec/changes/archive/2026-11-05-ejercicio-5-roles-permisos/`. Se comprobó que propósito, requisitos y escenarios conservan exactamente el contenido del delta, normalizando sólo los saltos de línea y los encabezados propios de una especificación principal. `openspec validate --specs --strict`: **4 passed, 0 failed**; `openspec list --json`: sin cambios activos. La evidencia vigente sigue siendo **213 pruebas sin DB y 71 PostgreSQL**, sin nueva ejecución ni cambios de producción. OpenSpec continúa local e ignorado por Git; el commit y push del código se realizan separadamente en `master`.

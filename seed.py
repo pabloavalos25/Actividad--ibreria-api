@@ -21,6 +21,7 @@ from app.modules.editoriales.models import Editorial
 from app.modules.generos.models import Genero
 from app.modules.libros.models import Libro, LibroAutor
 from app.modules.ventas.models import RenglonVenta, Venta
+from app.modules.usuarios.models import EventoSeguridad
 
 VACIAR_TABLAS = text(
     "TRUNCATE renglon_venta, venta, perfil_cliente, cliente, "
@@ -154,6 +155,7 @@ async def cargar(session: AsyncSession) -> None:
             ],
         ),
     )
+    await agregar(session, EventoSeguridad(actor='SISTEMA', accion='Carga de los datos iniciales'))
     await session.commit()
 
 

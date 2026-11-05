@@ -4,7 +4,7 @@ API asincrónica con FastAPI, SQLModel y PostgreSQL. Continúa el TP de capítul
 
 Integrantes: Pablo Avalos, Ismael Suarez y Sofia Blangetti.
 
-El parcial está en desarrollo. Están implementados los ejercicios 1 a 4: configuración, modelos/migraciones, contratos/CRUD/paginación y autenticación. El alta de libros ya usa una sesión real con rol ADMIN vigente consultado en DB. Quedan la administración completa de roles y permisos del ejercicio 5, la migración general a repositorios/UoW, stock/ventas atómicas y los casos C completos. Ver [progreso y evidencia TDD](docs/PROGRESO_PARCIAL_CAP1A6.md) y [requisitos completos](docs/REQUISITOS_PARCIAL_CAP1A6.md).
+El parcial está en desarrollo. Están implementados los ejercicios 1 a 5: configuración, modelos/migraciones, contratos/CRUD/paginación, autenticación y autorización. Quedan la migración general a repositorios/UoW, stock/ventas atómicas, seed ampliado y los casos C completos. Ver [progreso y evidencia TDD](docs/PROGRESO_PARCIAL_CAP1A6.md) y [requisitos completos](docs/REQUISITOS_PARCIAL_CAP1A6.md).
 
 ## Acceso (ejercicio 4)
 
@@ -16,7 +16,19 @@ El parcial está en desarrollo. Están implementados los ejercicios 1 a 4: confi
 - Email usa la validación EmailStr (normaliza dominio); la parte local conserva mayúsculas y la comparación coincide con el UNIQUE PostgreSQL sensible a mayúsculas. No se unifican fichas existentes silenciosamente.
 - Los intentos se confirman en una sesión independiente para sobrevivir al rollback del login. La IP viene de la conexión; no se confía en `X-Forwarded-For`.
 
-Los endpoints anteriores usan repositorio y UoW del módulo usuarios, compartiendo sesión de petición con autenticación. Los CRUD anteriores aún deben migrarse en ejercicio 6. La matriz general de permisos, alta de personal, administración de roles y restricciones globales de cambio obligatorio quedan para ejercicio 5; no se declara finalizada esa autorización.
+Los endpoints anteriores usan repositorio y UoW del módulo usuarios, compartiendo sesión de petición con autenticación. Los CRUD anteriores aún deben migrarse en ejercicio 6.
+
+## Roles y permisos (ejercicio 5)
+
+- `POST /usuarios` (ADMIN): `{nombre,email,password_provisoria,rol}`; rol inicial ADMIN o VENDEDOR. Crea personal con cambio obligatorio y evento en la misma transacción; no crea ficha de cliente ni devuelve hash.
+- `GET /usuarios/{id}/roles` (ADMIN): historial completo, incluidas filas vencidas/revocadas. `POST` recibe `{rol,vence_en?}` con ADMIN/VENDEDOR/CLIENTE y fecha futura con zona; una asignación vigente repetida da 409. Reasignar una vencida cierra su fila y crea otra. `DELETE /usuarios/{id}/roles/{rol}` conserva historial y devuelve 200; no permite autorrevocar ADMIN ni dejar cero administradores vigentes (409).
+- ADMIN administra catálogo y consulta `GET /eventos?page=1&size=20`. ADMIN o VENDEDOR administra clientes y registra/lista ventas. Los roles se consultan en DB en cada petición, sin confiar en los roles del token.
+- `GET /mis-ventas` exige sólo autenticación y pagina únicamente ventas propias. El detalle `/ventas/{id}` admite personal o cliente dueño, incluso si éste ya no tiene rol CLIENTE; tercero 403, inexistente 404.
+- `main.py` monta grupos público y protegido; este último tiene un único control de cambio obligatorio. Mientras está pendiente, rutas privadas devuelven 403, y `/auth` y catálogo público siguen disponibles. Cambiar contraseña habilita los permisos con la misma cookie.
+- Los detalles de autor/editorial existentes siguen públicos por contener sólo catálogo. Todas las rutas de clientes/perfiles son privadas. Reposición y consulta de movimientos nuevas corresponden al próximo bloque de stock, todavía pendiente.
+- El seed actual registra el evento `SISTEMA` / `Carga de los datos iniciales` dentro de su transacción. Sigue siendo el seed anterior de catálogo: aún no prepara los usuarios/roles y movimientos exigidos por el ejercicio 8. No usarlo para inicializar permisos ni ejecutarlo sobre una base con datos sin revisar su destino.
+
+Verificación actual: **213 pruebas sin DB y 71 PostgreSQL**, incluyendo permisos, propiedad, historial, eventos y rollback. No se evalúan bloqueos de concurrencia del capítulo 7; la regla de administradores comprueba vigencia al momento de la operación.
 
 ## Dos proyectos para la entrega
 

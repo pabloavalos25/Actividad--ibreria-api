@@ -14,7 +14,7 @@ from test_crud_http import cliente, sesion_vacia
 
 @pytest.mark.parametrize('stock', [0,3])
 def test_alta_sin_sesion_autenticada_falla_cerrada(stock):
-    with cliente(sesion_vacia()) as client:
+    with cliente(sesion_vacia(), personal=False) as client:
         response=client.post('/libros/',json=dict(isbn='1',titulo='L',precio='2.50',stock_inicial=stock,editorial_id=1))
     assert response.status_code == 401
 
