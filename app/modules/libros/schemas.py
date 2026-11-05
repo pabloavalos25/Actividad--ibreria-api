@@ -11,28 +11,30 @@ RolAutor = Literal["autor", "coautor", "traductor", "ilustrador"]
 
 
 class AutoriaCreate(SQLModel):
-    autor_id: int
+    model_config = ConfigDict(extra="forbid")
+
+    autor_id: int = Field(gt=0, le=2147483647)
     rol: RolAutor
-    orden: int = Field(ge=1)
+    orden: int = Field(ge=1, le=2147483647)
 
 
 class LibroCreate(SQLModel):
-    isbn: str
-    titulo: str
-    precio: Decimal = Field(gt=0)
-    stock: int = Field(ge=0)
-    editorial_id: int
+    model_config = ConfigDict(extra="forbid")
+
+    isbn: str = Field(min_length=1, max_length=20)
+    titulo: str = Field(min_length=1, max_length=200)
+    precio: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+    stock_inicial: int = Field(ge=0, le=2147483647)
+    editorial_id: int = Field(gt=0, le=2147483647)
     genero_id: int | None = None
     autores: list[AutoriaCreate] = []
 
 
 class LibroUpdate(SQLModel):
-    isbn: str | None = None
-    titulo: str | None = None
-    precio: Decimal | None = Field(default=None, gt=0)
-    stock: int | None = Field(default=None, ge=0)
-    editorial_id: int | None = None
-    genero_id: int | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    titulo: str = Field(default=None, min_length=1, max_length=200)
+    precio: Decimal = Field(default=None, gt=0, max_digits=10, decimal_places=2)
 
 
 class AutorConRol(SQLModel):

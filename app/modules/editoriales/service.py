@@ -1,3 +1,4 @@
+from app.core.paginacion import paginar
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,13 +23,16 @@ async def crear_editorial(
 
 async def listar_editoriales(
     session: AsyncSession,
-    limit: int,
-    offset: int,
-) -> list[Editorial]:
-    result = await session.execute(
-        select(Editorial).order_by(Editorial.id).offset(offset).limit(limit)
+    page: int,
+    size: int,
+) -> dict:
+    pagina = await paginar(
+        session,
+        select(Editorial).order_by(Editorial.id),
+        page,
+        size,
     )
-    return list(result.scalars().all())
+    return pagina
 
 
 async def obtener_editorial(session: AsyncSession, editorial_id: int) -> Editorial:

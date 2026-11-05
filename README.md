@@ -1,10 +1,10 @@
-﻿# Librería API — parcial capítulos 1 a 6
+# Librería API — parcial capítulos 1 a 6
 
 API asincrónica con FastAPI, SQLModel y PostgreSQL. Continúa el TP de capítulos 1 a 4 de Programación III (UTN).
 
 Integrantes: Pablo Avalos, Ismael Suarez y Sofia Blangetti.
 
-El parcial está en desarrollo. Se implementaron el ejercicio 1 (configuración, ciclo de vida y salud) y el ejercicio 2 (modelos, relaciones y migraciones), con pruebas automatizadas. La capa de repositorios/UoW, los endpoints de acceso/roles, la lógica de movimientos de stock y los casos C completos siguen pendientes. Ver [progreso y evidencia TDD](docs/PROGRESO_PARCIAL_CAP1A6.md) y [requisitos completos](docs/REQUISITOS_PARCIAL_CAP1A6.md).
+El parcial está en desarrollo. Se implementaron el ejercicio 1 (configuración, ciclo de vida y salud), el ejercicio 2 (modelos, relaciones y migraciones) y los contratos/CRUD/paginación del ejercicio 3, con pruebas automatizadas. El alta de libros queda cerrada con 401 hasta conectar el usuario autenticado en el ejercicio 4; la integración con un usuario real ya está probada en PostgreSQL. La capa de repositorios/UoW, los endpoints de acceso/roles, la lógica de movimientos de stock y los casos C completos siguen pendientes. Ver [progreso y evidencia TDD](docs/PROGRESO_PARCIAL_CAP1A6.md) y [requisitos completos](docs/REQUISITOS_PARCIAL_CAP1A6.md).
 
 ## Dos proyectos para la entrega
 
@@ -82,7 +82,7 @@ El lifespan crea motor y fábrica de sesiones, guarda recursos en `app.state`, i
 
 La suite actual usa credenciales ficticias, motores sin conexiones y dobles controlados para salud. Incluye generación SQL offline de Alembic y fallos de configuración. No necesita PostgreSQL ni lee el `.env` real en sus pruebas de configuración. `pytest.ini` limita los tests a `test/` y mantiene temporales dentro de `tmp/`.
 
-Se verificaron 44 pruebas de unidad/modelos/offline y, por separado, 29 pruebas contra PostgreSQL 17 aislado. También se ejecutó desde una base vacía `upgrade head → downgrade base → upgrade head`, sin diferencias entre modelos y esquema según `alembic check`. Esto todavía no demuestra los casos HTTP C-01 a C-16 completos. Los archivos `.http` existentes y `test/evidencia_c07.md` corresponden al TP previo.
+Se verificaron 158 pruebas de unidad/modelos/offline/HTTP y, por separado, 37 pruebas contra PostgreSQL 17 aislado. También se ejecutó desde una base vacía `upgrade head → downgrade base → upgrade head`, sin diferencias entre modelos y esquema según `alembic check`. Esto todavía no demuestra los casos HTTP C-01 a C-16 completos. Los archivos `.http` existentes y `test/evidencia_c07.md` corresponden al TP previo.
 
 Para repetir la validación PostgreSQL completa con un Python convencional y los binarios instalados:
 
@@ -91,7 +91,7 @@ Para repetir la validación PostgreSQL completa con un Python convencional y los
 # Otra instalación: agregar --pg-bin 'C:/ruta/PostgreSQL/bin'
 ```
 
-El verificador crea un cluster nuevo dentro de `tmp/`, con datos ficticios, autenticación local de pruebas y escucha sólo en `127.0.0.1`, en un puerto libre distinto de 5432. Comprueba su directorio antes de usarlo, ejecuta las cuatro migraciones, la reversión a base y la nueva subida, compara el esquema, ejecuta las 29 pruebas online y detiene su propio servidor en `finally`. No acepta una URL de una base existente ni lee el `.env` del proyecto. Logs y configuración temporal quedan ignorados en `tmp/`.
+El verificador crea un cluster nuevo dentro de `tmp/`, con datos ficticios, autenticación local de pruebas y escucha sólo en `127.0.0.1`, en un puerto libre distinto de 5432. Comprueba su directorio antes de usarlo, ejecuta las cuatro migraciones, la reversión a base y la nueva subida, compara el esquema, ejecuta las pruebas online y detiene su propio servidor en `finally`. No acepta una URL de una base existente ni lee el `.env` del proyecto. Logs y configuración temporal quedan ignorados en `tmp/`.
 
 En esta sesión Codex/Windows, `initdb` requirió ejecución fuera del sandbox y el launcher `.venv` elevado presentó un fallo nativo al importar asyncpg. Se verificó el proceso completo con este arranque alternativo, que lee únicamente las dependencias ya instaladas en `.venv` y no modifica el Python global:
 
@@ -111,6 +111,16 @@ En esta máquina se creó `.venv` desde Python 3.13.12 de pgAdmin mediante virtu
 
 ## Estructura y reglas
 
-`app/core/` contiene configuración, fábrica/sesiones, errores y la primitiva bcrypt; `app/main.py`, el lifespan y routers. `app/modules/usuarios/models.py` incorpora Usuario, AsignacionRol, IntentoAcceso y EventoSeguridad; MovimientoStock vive en libros. Cliente tiene usuario opcional escalar y Libro incorpora baja lógica e ISBN único sólo entre vigentes. Los cambios de stock y la autorización todavía no están conectados a los servicios. `migrations/` contiene Alembic, `test/` las verificaciones sin DB y `postgres_tests/` las pruebas online.
+`app/core/` contiene configuración, fábrica/sesiones, errores, paginación y la primitiva bcrypt; `app/main.py`, el lifespan y routers. `app/modules/usuarios/models.py` incorpora Usuario, AsignacionRol, IntentoAcceso y EventoSeguridad; MovimientoStock vive en libros. Cliente tiene usuario opcional escalar y Libro incorpora baja lógica e ISBN único sólo entre vigentes. El alta con stock positivo crea su movimiento inicial en la misma confirmación. La reposición, el descuento por ventas y la autorización completa siguen pendientes. `migrations/` contiene Alembic, `test/` las verificaciones sin DB y `postgres_tests/` las pruebas online.
 
 Se mantienen nombres obligatorios de tablas/columnas, dinero con Decimal, handlers asincrónicos, precarga de relaciones y mensajes de error propios. El nuevo flujo Router → Service → UoW → Repository → Model y los cambios del modelo se aplicarán en los próximos bloques.
+
+## Contratos y listados del ejercicio 3
+
+Los ocho listados existentes usan `page` (desde 1) y `size` (1..100, por defecto 20), y responden `{items,total,page,size,pages}`. Esto reemplaza `limit`/`offset`; adaptar los clientes HTTP anteriores. Una colección vacía tiene una página; una página posterior a la última da 422. El total comparte filtros con los elementos, incluida la baja lógica y la búsqueda de título sin distinguir mayúsculas.
+
+Las entradas rechazan campos extra. `PATCH /libros/{id}` admite solamente título y precio; aplica sólo campos enviados, rechaza null y no permite modificar stock. El alta usa `stock_inicial` y autorías (`autor_id`, `rol`, `orden`). `DELETE /libros/{id}` marca la baja y responde 204; detalle y catálogo dejan de devolverlo, sin romper ventas históricas. Las ventas rechazan renglones vacíos/repetidos y precios/totales enviados; el servidor calcula con Decimal. No hay PATCH de ventas.
+
+**Integración pendiente con ejercicio 4:** `POST /libros/` requiere `requerir_usuario_id`, que por ahora responde 401 siempre. No hay usuario ficticio, ID enviado por cliente ni cabecera que evite el control. Al conectar cookie/usuario/roles, esa dependencia debe devolver el ID real; las pruebas ASGI/PostgreSQL ya sustituyen la dependencia por un usuario existente y verifican 201, movimiento inicial y rollback. Stock inicial cero no genera movimiento porque su cantidad no puede ser cero. El registro de usuarios y sus DTO se incorporarán junto con autenticación; no se afirma que ese criterio transversal ya está terminado.
+
+La migración de servicios a repositorios/UoW corresponde al ejercicio 6. El contrato de stock inicial no significa que ya está resuelta toda la lógica de stock/ventas. Evidencia y límites en [progreso](docs/PROGRESO_PARCIAL_CAP1A6.md).

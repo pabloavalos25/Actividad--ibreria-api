@@ -1,15 +1,19 @@
 from pydantic import ConfigDict
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Field
 
 
 class EditorialCreate(SQLModel):
-    nombre: str
-    pais: str
+    model_config = ConfigDict(extra="forbid")
+
+    nombre: str = Field(min_length=1, max_length=100)
+    pais: str = Field(min_length=1, max_length=100)
 
 
 class EditorialUpdate(SQLModel):
-    nombre: str | None = None
-    pais: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    nombre: str = Field(default=None, min_length=1, max_length=100)
+    pais: str = Field(default=None, min_length=1, max_length=100)
 
 
 class EditorialRef(SQLModel):

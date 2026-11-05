@@ -10,14 +10,14 @@ from app.modules.clientes.schemas import ClienteRef
 class RenglonCreate(SQLModel):
     model_config = ConfigDict(extra="forbid")
 
-    libro_id: int
-    cantidad: int = Field(gt=0)
+    libro_id: int = Field(gt=0, le=2147483647)
+    cantidad: int = Field(gt=0, le=2147483647)
 
 
 class VentaCreate(SQLModel):
     model_config = ConfigDict(extra="forbid")
 
-    cliente_id: int
+    cliente_id: int = Field(gt=0, le=2147483647)
     renglones: list[RenglonCreate] = Field(min_length=1)
 
     @model_validator(mode="after")

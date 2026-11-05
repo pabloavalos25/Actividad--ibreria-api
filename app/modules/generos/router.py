@@ -1,3 +1,6 @@
+from typing import Annotated
+from fastapi import Path
+from app.core.paginacion import Pagina
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,24 +22,26 @@ async def crear_genero(
     return GeneroRead.model_validate(genero, from_attributes=True)
 
 
-@router.get("/", response_model=list[GeneroRead])
+@router.get("/", response_model=Pagina[GeneroRead])
 async def listar_generos(
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    size: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1),
     session: AsyncSession = Depends(get_session),
-) -> list[GeneroRead]:
-    generos = await service.listar_generos(session, limit, offset)
-    return [GeneroRead.model_validate(g, from_attributes=True) for g in generos]
+) -> dict:
+    generos = await service.listar_generos(session, page, size)
+    generos["items"] = [GeneroRead.model_validate(g, from_attributes=True) for g in generos["items"]]
+    return generos
 
 
-@router.get("/{genero_id}/libros", response_model=list[LibroRead])
+@router.get("/{genero_id}/libros", response_model=Pagina[LibroRead])
 async def listar_libros_de_genero(
-    genero_id: int,
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    genero_id: Annotated[int, Path(gt=0, le=2147483647)],
+    size: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1),
     session: AsyncSession = Depends(get_session),
-) -> list[LibroRead]:
+) -> dict:
     libros = await libros_service.listar_libros_de_genero(
-        session, genero_id, limit, offset
+        session, genero_id, page, size
     )
-    return [LibroRead.model_validate(libro, from_attributes=True) for libro in libros]
+    libros["items"] = [LibroRead.model_validate(libro, from_attributes=True) for libro in libros["items"]]
+    return libros

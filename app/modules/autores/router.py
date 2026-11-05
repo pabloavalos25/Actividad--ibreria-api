@@ -1,3 +1,6 @@
+from typing import Annotated
+from fastapi import Path
+from app.core.paginacion import Pagina
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,7 +27,7 @@ async def crear_autor(
 
 @router.get("/{autor_id}", response_model=AutorRead)
 async def obtener_autor(
-    autor_id: int,
+    autor_id: Annotated[int, Path(gt=0, le=2147483647)],
     session: AsyncSession = Depends(get_session),
 ) -> AutorRead:
     autor = await service.obtener_autor(session, autor_id)
@@ -33,7 +36,7 @@ async def obtener_autor(
 
 @router.patch("/{autor_id}", response_model=AutorRead)
 async def actualizar_autor(
-    autor_id: int,
+    autor_id: Annotated[int, Path(gt=0, le=2147483647)],
     datos: AutorUpdate,
     session: AsyncSession = Depends(get_session),
 ) -> AutorRead:
@@ -41,11 +44,11 @@ async def actualizar_autor(
     return AutorRead.model_validate(autor, from_attributes=True)
 
 
-@router.get("/{autor_id}/libros", response_model=list[LibroConRol])
+@router.get("/{autor_id}/libros", response_model=Pagina[LibroConRol])
 async def listar_libros_de_autor(
-    autor_id: int,
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    autor_id: Annotated[int, Path(gt=0, le=2147483647)],
+    size: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1),
     session: AsyncSession = Depends(get_session),
-) -> list[LibroConRol]:
-    return await service.listar_libros_de_autor(session, autor_id, limit, offset)
+) -> dict:
+    return await service.listar_libros_de_autor(session, autor_id, page, size)

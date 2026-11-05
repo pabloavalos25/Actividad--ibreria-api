@@ -1,13 +1,17 @@
 from pydantic import ConfigDict
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Field
 
 
 class GeneroCreate(SQLModel):
-    nombre: str
+    model_config = ConfigDict(extra="forbid")
+
+    nombre: str = Field(min_length=1, max_length=100)
 
 
 class GeneroUpdate(SQLModel):
-    nombre: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    nombre: str = Field(default=None, min_length=1, max_length=100)
 
 
 class GeneroRef(SQLModel):

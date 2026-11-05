@@ -1,3 +1,4 @@
+from app.core.paginacion import paginar
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -5,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from app.core.errors import no_encontrado
 from app.modules.autores.models import Autor
 from app.modules.autores.schemas import AutorCreate, AutorUpdate, LibroConRol
-from app.modules.libros.models import LibroAutor
+from app.modules.libros.models import Libro, LibroAutor
 
 
 async def crear_autor(session: AsyncSession, datos: AutorCreate) -> Autor:
@@ -41,19 +42,20 @@ async def actualizar_autor(
 async def listar_libros_de_autor(
     session: AsyncSession,
     autor_id: int,
-    limit: int,
-    offset: int,
-) -> list[LibroConRol]:
+    page: int,
+    size: int,
+) -> dict:
     await obtener_autor(session, autor_id)
-    result = await session.execute(
-        select(LibroAutor)
-        .where(LibroAutor.autor_id == autor_id)
+    pagina = await paginar(
+        session,
+        select(LibroAutor).join(Libro)
+        .where(LibroAutor.autor_id == autor_id, Libro.borrado_en.is_(None))
         .options(joinedload(LibroAutor.libro))
-        .order_by(LibroAutor.orden, LibroAutor.libro_id)
-        .offset(offset)
-        .limit(limit)
+        .order_by(LibroAutor.orden, LibroAutor.libro_id),
+        page,
+        size,
     )
-    return [
+    pagina["items"] = [
         LibroConRol(
             libro_id=autoria.libro_id,
             isbn=autoria.libro.isbn,
@@ -63,5 +65,7 @@ async def listar_libros_de_autor(
             rol=autoria.rol,
             orden=autoria.orden,
         )
-        for autoria in result.scalars().all()
+        for autoria in pagina["items"]
     ]
+
+    return pagina

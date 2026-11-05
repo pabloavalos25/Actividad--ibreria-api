@@ -1,17 +1,21 @@
 from decimal import Decimal
 
 from pydantic import ConfigDict
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Field
 
 
 class AutorCreate(SQLModel):
-    nombre: str
-    nacionalidad: str
+    model_config = ConfigDict(extra="forbid")
+
+    nombre: str = Field(min_length=1, max_length=100)
+    nacionalidad: str = Field(min_length=1, max_length=100)
 
 
 class AutorUpdate(SQLModel):
-    nombre: str | None = None
-    nacionalidad: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    nombre: str = Field(default=None, min_length=1, max_length=100)
+    nacionalidad: str = Field(default=None, min_length=1, max_length=100)
 
 
 class AutorRead(SQLModel):

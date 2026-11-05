@@ -1,3 +1,5 @@
+from app.core.paginacion import paginar
+from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -5,7 +7,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from app.core.errors import conflicto_de_integridad, no_encontrado
 from app.modules.editoriales import service as editoriales_service
 from app.modules.generos import service as generos_service
-from app.modules.libros.models import Libro, LibroAutor
+from app.modules.libros.models import Libro, LibroAutor, MovimientoStock
 from app.modules.libros.schemas import (
     AutorConRol,
     LibroCreate,
@@ -26,12 +28,12 @@ opciones_listado = (
 )
 
 
-async def crear_libro(session: AsyncSession, datos: LibroCreate) -> Libro:
+async def crear_libro(session: AsyncSession, datos: LibroCreate, *, usuario_id: int) -> Libro:
     libro = Libro(
         isbn=datos.isbn,
         titulo=datos.titulo,
         precio=datos.precio,
-        stock=datos.stock,
+        stock=datos.stock_inicial,
         editorial_id=datos.editorial_id,
         genero_id=datos.genero_id,
         autorias=[
@@ -43,42 +45,48 @@ async def crear_libro(session: AsyncSession, datos: LibroCreate) -> Libro:
     async with conflicto_de_integridad(
         session, "No se pudo crear el libro: editorial, genero, autor o isbn invalidos"
     ):
+        if datos.stock_inicial:
+            session.add(MovimientoStock(libro=libro, usuario_id=usuario_id,
+                                        cantidad=datos.stock_inicial, motivo='Stock inicial'))
         await session.commit()
     return await obtener_libro(session, libro.id)
 
 
 async def listar_libros(
     session: AsyncSession,
-    limit: int,
-    offset: int,
+    page: int,
+    size: int,
     titulo: str | None,
     genero_id: int | None,
-) -> list[Libro]:
-    consulta = select(Libro)
+) -> dict:
+    consulta = select(Libro).where(Libro.borrado_en.is_(None))
     if titulo is not None:
         consulta = consulta.where(Libro.titulo.ilike(f"%{titulo}%"))
     if genero_id is not None:
-        consulta = consulta.where(Libro.genero_id == genero_id)
+        consulta = consulta.where(Libro.genero_id == genero_id, Libro.borrado_en.is_(None))
     consulta = (
         consulta.options(*opciones_listado)
         .order_by(Libro.id)
-        .offset(offset)
-        .limit(limit)
     )
-    result = await session.execute(consulta)
-    return list(result.scalars().unique().all())
+    return await paginar(session, consulta, page, size)
 
 
 async def obtener_libro(session: AsyncSession, libro_id: int) -> Libro:
     result = await session.execute(
         select(Libro)
-        .where(Libro.id == libro_id)
+        .where(Libro.id == libro_id, Libro.borrado_en.is_(None))
         .options(*opciones_detalle)
     )
     libro = result.scalar_one_or_none()
     if libro is None:
         raise no_encontrado("Libro no encontrado")
     return libro
+
+
+async def eliminar_libro(session: AsyncSession, libro_id: int) -> None:
+    libro = await obtener_libro(session, libro_id)
+    libro.borrado_en = datetime.now(timezone.utc)
+    await session.commit()
 
 
 async def actualizar_libro(
@@ -100,37 +108,39 @@ async def actualizar_libro(
 async def listar_libros_de_editorial(
     session: AsyncSession,
     editorial_id: int,
-    limit: int,
-    offset: int,
-) -> list[Libro]:
+    page: int,
+    size: int,
+) -> dict:
     await editoriales_service.obtener_editorial(session, editorial_id)
-    result = await session.execute(
+    pagina = await paginar(
+        session,
         select(Libro)
-        .where(Libro.editorial_id == editorial_id)
+        .where(Libro.editorial_id == editorial_id, Libro.borrado_en.is_(None))
         .options(*opciones_listado)
-        .order_by(Libro.id)
-        .offset(offset)
-        .limit(limit)
+        .order_by(Libro.id),
+        page,
+        size,
     )
-    return list(result.scalars().unique().all())
+    return pagina
 
 
 async def listar_libros_de_genero(
     session: AsyncSession,
     genero_id: int,
-    limit: int,
-    offset: int,
-) -> list[Libro]:
+    page: int,
+    size: int,
+) -> dict:
     await generos_service.obtener_genero(session, genero_id)
-    result = await session.execute(
+    pagina = await paginar(
+        session,
         select(Libro)
-        .where(Libro.genero_id == genero_id)
+        .where(Libro.genero_id == genero_id, Libro.borrado_en.is_(None))
         .options(*opciones_listado)
-        .order_by(Libro.id)
-        .offset(offset)
-        .limit(limit)
+        .order_by(Libro.id),
+        page,
+        size,
     )
-    return list(result.scalars().unique().all())
+    return pagina
 
 
 def detalle(libro: Libro) -> LibroDetalleRead:

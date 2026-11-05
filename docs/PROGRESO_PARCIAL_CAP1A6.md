@@ -102,3 +102,48 @@ Quedan pendientes repositorios/UoW, contratos/paginación, autenticación y auto
 
 - Context7: pydantic-settings (BaseSettings, SettingsConfigDict), FastAPI (lifespan/TestClient), SQLAlchemy (URL.create, pool, sesiones asincrónicas).
 - [bcrypt oficial](https://github.com/pyca/bcrypt): hashpw, gensalt y costo configurable.
+
+
+## Ejercicio 3 - contratos, CRUD y paginación (5 de noviembre de 2026)
+
+**Estado:** contratos y listados actuales implementados y verificados. La integración del alta con acceso y el contrato de registro de usuarios quedan pendientes del ejercicio 4; no se declara cerrado el parcial ni el criterio transversal de registro. Gobernanza MEDIUM, sin UI (`Decision: no (no UI)`). No se modificaron `.env`, `despliegue/`, migraciones ni servicios PostgreSQL ajenos.
+
+- DTO separados de tablas; `extra="forbid"` en entradas, límites de longitud/precisión de columnas e IDs/cantidades enteros dentro del rango PostgreSQL. PATCH omite campos no enviados y rechaza null en campos obligatorios. Libro actualiza sólo título/precio y no recibe stock.
+- Los ocho listados existentes (`libros`, `editoriales`, `generos`, `ventas`, libros por autor/editorial/género y ventas por cliente) responden `{items,total,page,size,pages}`. `page>=1`, `size=1..100`, default 20, vacío pages=1 y fuera de rango 422. Conteo y elementos parten de la misma consulta filtrada. La búsqueda ilike usa parámetros ligados, verificada también con texto de intento de inyección.
+- Alta usa `stock_inicial`; un valor positivo crea `MovimientoStock` con motivo `Stock inicial`, actor real y libro en la misma transacción. Con cero no se crea movimiento (CHECK cantidad<>0). Un conflicto de ISBN o FK revierte libro y movimiento. No se crean usuarios ni actores artificiales.
+- `POST /libros/` queda temporalmente protegido por `requerir_usuario_id` que falla cerrado con 401 para cualquier petición, hasta cablear cookie/usuario/roles en ejercicio 4. Un override de pruebas con usuario real permitió verificar el 201 y sus escrituras. No aceptar IDs arbitrarios del cliente al completar esa dependencia.
+- Baja lógica 204; recurso inexistente o ya borrado 404. Catálogo y listados por relaciones excluyen borrados. Venta nueva con libro borrado 409; detalle histórico conserva la relación y sus datos.
+- Venta sigue recibiendo sólo cliente/renglones, rechaza vacío/repetidos/precio/total, copia precios y calcula total/subtotal Decimal. No existe PATCH de venta. Stock disponible, descuento y movimientos de ventas siguen pendientes del bloque de stock/UoW.
+- Conflictos de integridad: 409 con texto propio; datos fuera de límites de DB: 422 con rollback y sin SQL ni trazas. Se conserva la separación 404 recurso de ruta / 409 referencia conflictiva.
+
+### TDD Cycle Evidence
+
+Safety net inicial: **44/44**. Antes de ejecutarla se instalaron las dependencias ya declaradas en `requirements-dev.txt` dentro de `.venv`; faltaban pytest y bcrypt. El primer arranque tuvo 41 aprobadas y tres errores de fixture por faltar `tmp/`, padre de `--basetemp=tmp/pytest`; se preparó ese directorio ignorado y la baseline completa quedó verde, sin cambiar pruebas ni producción para ocultarlo.
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| Entradas y PATCH | `test/test_contracts.py` | DTO | 44/44 | 26 fallos; después 6 de límites | 42/42 | campos extra, null, límites, cero/positivo, ventas inválidas | suite verde |
+| Paginación compartida | `test/test_paginacion.py` | Unidad/SQL | 44/44 | módulo inexistente | 8/8 | vacío, final, rangos y filtros | suite verde |
+| Listados y parámetros | `test/test_crud_http.py` | HTTP/routers, sesión controlada | 44/44 | 43 fallos; después 10 IDs | 54/54 | ocho listados x parámetros y null/IDs | suite verde |
+| Alta y baja | `test/test_libros_crud.py` | HTTP/servicio | 44/44 | 6 fallos | 6/6 | stock cero/positivo y 204/404, 401 | suite verde |
+| Errores propios | `test/test_errors.py` | Unidad | 44/44 | 2 DataError sin traducir | 4/4 | dos errores x dos mensajes internos | suite verde |
+| Persistencia y relaciones | `postgres_tests/test_crud.py` | ASGI + PostgreSQL real | suite previa 29 conservada | 2 bajas en catálogo; 2 ventas de borrado | 8/8 nuevos | cero/positivo, búsqueda literal/case, FK rollback, ventas cantidades 1/3 | 37/37 total verde |
+
+Los primeros intentos de nuevos tests necesitaron importar todos los modelos relacionados y corregir una suposición sobre el orden de parámetros SQL compilados; fueron arreglos de fixture, no cambios para evitar el comportamiento exigido. La ampliación PostgreSQL expuso que una venta aún admitía un libro borrado (201): se agregó el filtro de vigencia y el mismo caso pasó con 409.
+
+Verificación final:
+
+- `python -m pytest -q`: **158 passed in 8.60s**. Incluye las 44 pruebas anteriores; aviso de deprecación Starlette/httpx sin fallos.
+- `PYTHONIOENCODING=utf-8 python scripts/test_postgres.py`: **37 passed in 6.36s**, cluster nuevo `tmp/postgres-tests-ff5a5264dd80`, puerto 54039. El runner ejecutó upgrade head -> downgrade base -> upgrade head y `alembic check` antes/después sin drift. Confirmó `server stopped` al salir.
+- Se usa UTF-8 en el proceso de verificación porque una salida de fallo con caracteres españoles provocó UnicodeEncodeError en la consola cp1252; no se modificó el runner ni el entorno global. Los clusters de todos los intentos se detuvieron en finally.
+- `git diff --check`: sin errores. Logs locales ignorados en la carpeta de cluster final (`verification.log`, `server.log`). No se ejecutó seed ni se alteró una base real.
+
+### Próximo bloque actualizado
+
+Ejercicio 4: registro/login/cookie y limitación de intentos, con DTO de registro sin roles/salidas sin hash; conectar `requerir_usuario_id` a validación real de sesión y permisos (coordinado con ejercicio 5). Después completar repositorios/UoW, stock/ventas atómicas y evidencias según el plan. La CLI OpenSpec ahora responde, pero `openspec list --json` informa `root:null`, `changes:[]`, `no_openspec_root`; las skills OpenSpec no se encontraron en ubicaciones activas. No se inicializó estructura OPSX ni se inventó un change para este bloque.
+
+### Formalización OPSX posterior (5 de noviembre de 2026)
+
+Por pedido explícito del usuario se inicializó OpenSpec con Codex y se completó propose → apply → archive para `ejercicio-3-contratos-crud-paginacion`. La propuesta registra que el código ya existía; apply reconcilió seis tareas, sin modificar producción ni recrear TDD retrospectivo. Se repitió la suite sin DB: **158 passed in 9.20s**; las **37 pruebas PostgreSQL** se respaldan con el log íntegro anterior, sin presentarlas como nueva ejecución.
+
+Archivo local: `openspec/changes/archive/2026-11-05-ejercicio-3-contratos-crud-paginacion/`. La CLI sincronizó ocho requisitos en `openspec/specs/contratos-crud/spec.md` y `openspec/specs/listados-paginados/spec.md`; `openspec validate --specs --strict`: **2 passed, 0 failed**. La lista de cambios activos quedó vacía. Se conservan explícitamente pendientes registro/auth4, permisos5, repositorios/UoW y stock de ventas; el alta sigue cerrada401 hasta integrar acceso. `openspec/` continúa ignorado por Git según la política existente; sin commit.

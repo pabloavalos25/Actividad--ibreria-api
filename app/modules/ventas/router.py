@@ -1,3 +1,6 @@
+from typing import Annotated
+from fastapi import Path
+from app.core.paginacion import Pagina
 import asyncio
 import logging
 
@@ -44,19 +47,20 @@ async def crear_venta(
     return respuesta
 
 
-@router.get("/", response_model=list[VentaRead])
+@router.get("/", response_model=Pagina[VentaRead])
 async def listar_ventas(
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    size: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1),
     session: AsyncSession = Depends(get_session),
-) -> list[VentaRead]:
-    ventas = await service.listar_ventas(session, limit, offset)
-    return [service.a_read(venta) for venta in ventas]
+) -> dict:
+    ventas = await service.listar_ventas(session, page, size)
+    ventas["items"] = [service.a_read(venta) for venta in ventas["items"]]
+    return ventas
 
 
 @router.get("/{venta_id}", response_model=VentaRead)
 async def obtener_venta(
-    venta_id: int,
+    venta_id: Annotated[int, Path(gt=0, le=2147483647)],
     session: AsyncSession = Depends(get_session),
 ) -> VentaRead:
     venta = await service.obtener_venta(session, venta_id)

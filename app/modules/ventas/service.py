@@ -1,3 +1,4 @@
+from app.core.paginacion import paginar
 from decimal import Decimal
 
 from fastapi import HTTPException
@@ -25,7 +26,7 @@ opciones_venta = (
 async def crear_venta(session: AsyncSession, datos: VentaCreate) -> Venta:
     libro_ids = [r.libro_id for r in datos.renglones]
     result = await session.execute(
-        select(Libro).where(Libro.id.in_(libro_ids))
+        select(Libro).where(Libro.id.in_(libro_ids), Libro.borrado_en.is_(None))
     )
     libros = {libro.id: libro for libro in result.scalars().all()}
 
@@ -58,17 +59,18 @@ async def crear_venta(session: AsyncSession, datos: VentaCreate) -> Venta:
 
 async def listar_ventas(
     session: AsyncSession,
-    limit: int,
-    offset: int,
-) -> list[Venta]:
-    result = await session.execute(
+    page: int,
+    size: int,
+) -> dict:
+    pagina = await paginar(
+        session,
         select(Venta)
         .options(*opciones_venta)
-        .order_by(Venta.id)
-        .offset(offset)
-        .limit(limit)
+        .order_by(Venta.id),
+        page,
+        size,
     )
-    return list(result.scalars().unique().all())
+    return pagina
 
 
 async def obtener_venta(session: AsyncSession, venta_id: int) -> Venta:
@@ -86,19 +88,20 @@ async def obtener_venta(session: AsyncSession, venta_id: int) -> Venta:
 async def listar_ventas_de_cliente(
     session: AsyncSession,
     cliente_id: int,
-    limit: int,
-    offset: int,
-) -> list[Venta]:
+    page: int,
+    size: int,
+) -> dict:
     await clientes_service.obtener_cliente(session, cliente_id)
-    result = await session.execute(
+    pagina = await paginar(
+        session,
         select(Venta)
         .where(Venta.cliente_id == cliente_id)
         .options(*opciones_venta)
-        .order_by(Venta.id)
-        .offset(offset)
-        .limit(limit)
+        .order_by(Venta.id),
+        page,
+        size,
     )
-    return list(result.scalars().unique().all())
+    return pagina
 
 
 def a_read(venta: Venta) -> VentaRead:

@@ -1,3 +1,6 @@
+from typing import Annotated
+from fastapi import Path
+from app.core.paginacion import Pagina
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,7 +30,7 @@ async def crear_cliente(
 
 @router.get("/{cliente_id}", response_model=ClienteRead)
 async def obtener_cliente(
-    cliente_id: int,
+    cliente_id: Annotated[int, Path(gt=0, le=2147483647)],
     session: AsyncSession = Depends(get_session),
 ) -> ClienteRead:
     cliente = await service.obtener_cliente(session, cliente_id)
@@ -36,7 +39,7 @@ async def obtener_cliente(
 
 @router.patch("/{cliente_id}", response_model=ClienteRead)
 async def actualizar_cliente(
-    cliente_id: int,
+    cliente_id: Annotated[int, Path(gt=0, le=2147483647)],
     datos: ClienteUpdate,
     session: AsyncSession = Depends(get_session),
 ) -> ClienteRead:
@@ -46,7 +49,7 @@ async def actualizar_cliente(
 
 @router.post("/{cliente_id}/perfil", response_model=PerfilRead, status_code=201)
 async def crear_perfil(
-    cliente_id: int,
+    cliente_id: Annotated[int, Path(gt=0, le=2147483647)],
     datos: PerfilCreate,
     session: AsyncSession = Depends(get_session),
 ) -> PerfilRead:
@@ -54,14 +57,15 @@ async def crear_perfil(
     return service.perfil_a_read(perfil)
 
 
-@router.get("/{cliente_id}/ventas", response_model=list[VentaRead])
+@router.get("/{cliente_id}/ventas", response_model=Pagina[VentaRead])
 async def listar_ventas_de_cliente(
-    cliente_id: int,
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    cliente_id: Annotated[int, Path(gt=0, le=2147483647)],
+    size: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1),
     session: AsyncSession = Depends(get_session),
-) -> list[VentaRead]:
+) -> dict:
     ventas = await ventas_service.listar_ventas_de_cliente(
-        session, cliente_id, limit, offset
+        session, cliente_id, page, size
     )
-    return [ventas_service.a_read(venta) for venta in ventas]
+    ventas["items"] = [ventas_service.a_read(venta) for venta in ventas["items"]]
+    return ventas

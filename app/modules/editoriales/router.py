@@ -1,3 +1,6 @@
+from typing import Annotated
+from fastapi import Path
+from app.core.paginacion import Pagina
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,19 +26,20 @@ async def crear_editorial(
     return EditorialRead.model_validate(editorial, from_attributes=True)
 
 
-@router.get("/", response_model=list[EditorialRead])
+@router.get("/", response_model=Pagina[EditorialRead])
 async def listar_editoriales(
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    size: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1),
     session: AsyncSession = Depends(get_session),
-) -> list[EditorialRead]:
-    editoriales = await service.listar_editoriales(session, limit, offset)
-    return [EditorialRead.model_validate(e, from_attributes=True) for e in editoriales]
+) -> dict:
+    editoriales = await service.listar_editoriales(session, page, size)
+    editoriales["items"] = [EditorialRead.model_validate(e, from_attributes=True) for e in editoriales["items"]]
+    return editoriales
 
 
 @router.get("/{editorial_id}", response_model=EditorialRead)
 async def obtener_editorial(
-    editorial_id: int,
+    editorial_id: Annotated[int, Path(gt=0, le=2147483647)],
     session: AsyncSession = Depends(get_session),
 ) -> EditorialRead:
     editorial = await service.obtener_editorial(session, editorial_id)
@@ -44,7 +48,7 @@ async def obtener_editorial(
 
 @router.patch("/{editorial_id}", response_model=EditorialRead)
 async def actualizar_editorial(
-    editorial_id: int,
+    editorial_id: Annotated[int, Path(gt=0, le=2147483647)],
     datos: EditorialUpdate,
     session: AsyncSession = Depends(get_session),
 ) -> EditorialRead:
@@ -52,14 +56,15 @@ async def actualizar_editorial(
     return EditorialRead.model_validate(editorial, from_attributes=True)
 
 
-@router.get("/{editorial_id}/libros", response_model=list[LibroRead])
+@router.get("/{editorial_id}/libros", response_model=Pagina[LibroRead])
 async def listar_libros_de_editorial(
-    editorial_id: int,
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    editorial_id: Annotated[int, Path(gt=0, le=2147483647)],
+    size: int = Query(20, ge=1, le=100),
+    page: int = Query(1, ge=1),
     session: AsyncSession = Depends(get_session),
-) -> list[LibroRead]:
+) -> dict:
     libros = await libros_service.listar_libros_de_editorial(
-        session, editorial_id, limit, offset
+        session, editorial_id, page, size
     )
-    return [LibroRead.model_validate(libro, from_attributes=True) for libro in libros]
+    libros["items"] = [LibroRead.model_validate(libro, from_attributes=True) for libro in libros["items"]]
+    return libros

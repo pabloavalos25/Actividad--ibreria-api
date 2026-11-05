@@ -1,3 +1,4 @@
+from app.core.paginacion import paginar
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,13 +20,16 @@ async def crear_genero(session: AsyncSession, datos: GeneroCreate) -> Genero:
 
 async def listar_generos(
     session: AsyncSession,
-    limit: int,
-    offset: int,
-) -> list[Genero]:
-    result = await session.execute(
-        select(Genero).order_by(Genero.id).offset(offset).limit(limit)
+    page: int,
+    size: int,
+) -> dict:
+    pagina = await paginar(
+        session,
+        select(Genero).order_by(Genero.id),
+        page,
+        size,
     )
-    return list(result.scalars().all())
+    return pagina
 
 
 async def obtener_genero(session: AsyncSession, genero_id: int) -> Genero:
