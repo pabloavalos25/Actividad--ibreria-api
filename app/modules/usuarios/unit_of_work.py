@@ -1,24 +1,13 @@
-from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException
+from app.core.unit_of_work import UnitOfWork
 from app.modules.usuarios.repository import UsuarioRepository
+from app.modules.usuarios.repository import AsignacionRolRepository, EventoSeguridadRepository
+from app.modules.clientes.repository import ClienteRepository
 
 
-class UsuariosUnitOfWork:
+class UsuariosUnitOfWork(UnitOfWork):
     def __init__(self, session):
-        self.session = session
+        super().__init__(session, 'El correo o la asignación ya están registrados')
         self.usuarios = UsuarioRepository(session)
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc, traceback):
-        try:
-            if exc_type is None:
-                await self.session.commit()
-            else:
-                await self.session.rollback()
-        except Exception:
-            await self.session.rollback()
-            raise
-        if isinstance(exc, IntegrityError):
-            raise HTTPException(409, 'El correo ya está registrado') from exc
+        self.roles = AsignacionRolRepository(session)
+        self.eventos = EventoSeguridadRepository(session)
+        self.clientes = ClienteRepository(session)

@@ -1,62 +1,33 @@
-from app.core.paginacion import paginar
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.errors import conflicto_de_integridad, no_encontrado
+from app.core.errors import no_encontrado
 from app.modules.editoriales.models import Editorial
-from app.modules.editoriales.schemas import EditorialCreate, EditorialUpdate
 
 
-async def crear_editorial(
-    session: AsyncSession,
-    datos: EditorialCreate,
-) -> Editorial:
-    editorial = Editorial.model_validate(datos, from_attributes=True)
-    session.add(editorial)
-    async with conflicto_de_integridad(
-        session, "Ya existe una editorial con ese nombre"
-    ):
-        await session.commit()
-    await session.refresh(editorial)
-    return editorial
+async def crear_editorial(uow, datos):
+    async with uow:
+        entity = Editorial.model_validate(datos, from_attributes=True)
+        await uow.editoriales.add(entity)
+    return entity
 
 
-async def listar_editoriales(
-    session: AsyncSession,
-    page: int,
-    size: int,
-) -> dict:
-    pagina = await paginar(
-        session,
-        select(Editorial).order_by(Editorial.id),
-        page,
-        size,
-    )
-    return pagina
+async def obtener_editorial(uow, editorial_id):
+    async with uow:
+        entity = await uow.editoriales.get_by_id(editorial_id)
+        if entity is None:
+            raise no_encontrado('Editorial no encontrada')
+    return entity
 
 
-async def obtener_editorial(session: AsyncSession, editorial_id: int) -> Editorial:
-    result = await session.execute(
-        select(Editorial).where(Editorial.id == editorial_id)
-    )
-    editorial = result.scalar_one_or_none()
-    if editorial is None:
-        raise no_encontrado("Editorial no encontrada")
-    return editorial
+async def listar_editoriales(uow, page, size):
+    async with uow:
+        return await uow.editoriales.page(page, size)
 
 
-async def actualizar_editorial(
-    session: AsyncSession,
-    editorial_id: int,
-    datos: EditorialUpdate,
-) -> Editorial:
-    editorial = await obtener_editorial(session, editorial_id)
-    for campo, valor in datos.model_dump(exclude_unset=True).items():
-        setattr(editorial, campo, valor)
-    session.add(editorial)
-    async with conflicto_de_integridad(
-        session, "Ya existe una editorial con ese nombre"
-    ):
-        await session.commit()
-    await session.refresh(editorial)
-    return editorial
+async def actualizar_editorial(uow, editorial_id, datos):
+    async with uow:
+        entity = await uow.editoriales.get_by_id(editorial_id)
+        if entity is None:
+            raise no_encontrado('Editorial no encontrada')
+        for field, value in datos.model_dump(exclude_unset=True).items():
+            setattr(entity, field, value)
+        await uow.editoriales.update(entity)
+    return entity

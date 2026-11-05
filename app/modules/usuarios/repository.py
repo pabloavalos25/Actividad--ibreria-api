@@ -2,11 +2,13 @@ from datetime import datetime
 from sqlalchemy import select, func
 from app.modules.usuarios.models import Usuario, AsignacionRol
 from app.modules.clientes.models import Cliente
+from app.core.repository import BaseRepository
+from app.modules.usuarios.models import IntentoAcceso, EventoSeguridad
 
 
-class UsuarioRepository:
+class UsuarioRepository(BaseRepository):
     def __init__(self, session):
-        self.session = session
+        super().__init__(session, Usuario)
 
     async def por_email(self, email):
         return await self.session.scalar(select(Usuario).where(Usuario.email == email))
@@ -25,10 +27,6 @@ class UsuarioRepository:
         ).order_by(AsignacionRol.rol))
         return list(result)
 
-    async def add(self, entity):
-        self.session.add(entity)
-        await self.session.flush()
-
     async def historial_roles(self, usuario_id):
         return list(await self.session.scalars(select(AsignacionRol).where(
             AsignacionRol.usuario_id == usuario_id).order_by(AsignacionRol.id)))
@@ -46,3 +44,42 @@ class UsuarioRepository:
         if excluir is not None:
             consulta = consulta.where(AsignacionRol.usuario_id != excluir)
         return await self.session.scalar(consulta)
+
+
+class AsignacionRolRepository(BaseRepository):
+    def __init__(self, session):
+        super().__init__(session, AsignacionRol)
+
+
+class EventoSeguridadRepository(BaseRepository):
+    def __init__(self, session):
+        super().__init__(session, EventoSeguridad)
+
+
+class IntentoAccesoRepository(BaseRepository):
+    def __init__(self, session):
+        super().__init__(session, IntentoAcceso)
+
+    async def recientes(self, email, ip, desde):
+        return list(await self.session.scalars(self.query().where(
+            IntentoAcceso.email == email, IntentoAcceso.ip == ip,
+            IntentoAcceso.cuando > desde).order_by(IntentoAcceso.cuando.desc(), IntentoAcceso.id.desc())))
+
+
+class HistorialAcceso:
+    """Única escritura con sesión propia: persiste aunque el login revierta.
+
+    El 401 revierte la petición; confirmar aparte permite contar ese fallo.
+    El costo deliberado es conservar filas de peticiones revertidas.
+    """
+    def __init__(self, factory):
+        self.factory = factory
+
+    async def recientes(self, email, ip, desde):
+        async with self.factory() as session:
+            return await IntentoAccesoRepository(session).recientes(email, ip, desde)
+
+    async def guardar(self, email, ip, exito, cuando):
+        async with self.factory() as session:
+            async with session.begin():
+                await IntentoAccesoRepository(session).add(IntentoAcceso(email=email, ip=ip, exito=exito, cuando=cuando))

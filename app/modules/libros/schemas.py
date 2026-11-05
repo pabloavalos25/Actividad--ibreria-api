@@ -1,4 +1,5 @@
 from decimal import Decimal
+from datetime import datetime
 from typing import Literal
 
 from pydantic import ConfigDict
@@ -60,3 +61,20 @@ class LibroRead(SQLModel):
 
 class LibroDetalleRead(LibroRead):
     autores: list[AutorConRol] = []
+
+
+class ReposicionCreate(SQLModel):
+    model_config = ConfigDict(extra='forbid')
+    cantidad: int = Field(gt=0, le=2147483647)
+    motivo: str = Field(min_length=1)
+
+
+class MovimientoRead(SQLModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    libro_id: int
+    usuario_id: int
+    venta_id: int | None
+    cantidad: int
+    motivo: str
+    cuando: datetime

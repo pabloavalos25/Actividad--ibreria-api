@@ -5,9 +5,7 @@ from app.modules.usuarios import service
 from app.modules.usuarios.schemas import Registro, Login, CambiarPassword, UsuarioRead, LoginRead, SesionRead
 from typing import Annotated
 from fastapi import Path, Query
-from sqlalchemy import select
-from app.core.paginacion import paginar, Pagina
-from app.modules.usuarios.models import EventoSeguridad
+from app.core.paginacion import Pagina
 from app.core.dependencies import requiere_admin
 from app.modules.usuarios.schemas import PersonalCreate, RolCreate, RolRead, Rol, EventoRead
 
@@ -38,7 +36,7 @@ async def revocar_rol(usuario_id: Annotated[int, Path(gt=0, le=2147483647)], rol
 
 @admin_router.get('/eventos', response_model=Pagina[EventoRead])
 async def listar_eventos(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), uow=Depends(get_uow)):
-    return await paginar(uow.session, select(EventoSeguridad).order_by(EventoSeguridad.id), page, size)
+    return await service.listar_eventos(uow, page, size)
 
 
 @router.post('/registro', response_model=UsuarioRead, status_code=201)
@@ -68,7 +66,7 @@ async def logout(request: Request, response: Response):
 @router.get('/yo', response_model=SesionRead)
 async def yo(actual=Depends(get_sesion_actual), uow=Depends(get_uow)):
     usuario, claims = actual
-    roles = await uow.usuarios.roles_vigentes(usuario.id, service.ahora_utc())
+    roles = await service.sesion_roles(uow, usuario.id)
     return SesionRead(usuario=UsuarioRead.model_validate(usuario), roles_vigentes=roles, roles_token=claims['roles'])
 
 

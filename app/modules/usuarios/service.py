@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta, timezone
 from math import ceil
 from fastapi import HTTPException
-from sqlalchemy import select
 from app.core.security import hash_password, verify_password
 from app.modules.clientes.models import Cliente
-from app.modules.usuarios.models import Usuario, AsignacionRol, IntentoAcceso, EventoSeguridad
+from app.modules.usuarios.models import Usuario, AsignacionRol, EventoSeguridad
+from app.modules.usuarios.repository import HistorialAcceso
 
 
 def ahora_utc():
@@ -24,28 +24,19 @@ async def registrar(uow, datos, settings, semaphore):
 
 
 async def comprobar_limite(factory, email, ip, ahora):
-    async with factory() as session:
-        result = await session.scalars(select(IntentoAcceso).where(
-            IntentoAcceso.email == email, IntentoAcceso.ip == ip,
-            IntentoAcceso.cuando > ahora - timedelta(seconds=60),
-        ).order_by(IntentoAcceso.cuando.desc(), IntentoAcceso.id.desc()))
-        fallos = []
-        for intento in result:
-            if intento.exito:
-                break
-            fallos.append(intento)
-        if len(fallos) >= 5:
-            retry = max(1, ceil((fallos[4].cuando + timedelta(seconds=60) - ahora).total_seconds()))
-            raise HTTPException(429, 'Demasiados intentos; vuelva a intentar', headers={'Retry-After': str(retry)})
+    result = await HistorialAcceso(factory).recientes(email, ip, ahora - timedelta(seconds=60))
+    fallos = []
+    for intento in result:
+        if intento.exito:
+            break
+        fallos.append(intento)
+    if len(fallos) >= 5:
+        retry = max(1, ceil((fallos[4].cuando + timedelta(seconds=60) - ahora).total_seconds()))
+        raise HTTPException(429, 'Demasiados intentos; vuelva a intentar', headers={'Retry-After': str(retry)})
 
 
 async def guardar_intento(factory, email, ip, exito, ahora):
-    # Excepción a transacción de petición: el login fallido lanza 401 y revierte
-    # su UoW. Esta sesión confirma el intento para que cuente aun con rollback;
-    # el costo es conservar historial de peticiones revertidas.
-    async with factory() as session:
-        async with session.begin():
-            session.add(IntentoAcceso(email=email, ip=ip, exito=exito, cuando=ahora))
+    await HistorialAcceso(factory).guardar(email, ip, exito, ahora)
 
 
 async def login(uow, datos, factory, dummy_hash, semaphore, ip):
@@ -65,7 +56,7 @@ async def cambiar_password(uow, usuario, datos, settings, semaphore):
     usuario_id, password_hash = usuario.id, usuario.password_hash
     # La dependencia leyó el usuario con autobegin; finalizar esa lectura antes
     # del trabajo costoso, y recargar dentro de la transacción de escritura.
-    await uow.session.rollback()
+    await uow.terminar_lectura()
     if not await verify_password(datos.password_actual, password_hash, semaphore=semaphore):
         raise HTTPException(401, 'Credenciales inválidas')
     hashed = await hash_password(datos.password_nueva, rounds=settings.bcrypt_rounds, semaphore=semaphore)
@@ -87,7 +78,7 @@ async def exigir_admin(uow, usuario_id):
 
 
 async def crear_personal(uow, actor_id, datos, settings, semaphore):
-    await uow.session.rollback()
+    await uow.terminar_lectura()
     hashed = await hash_password(datos.password_provisoria, rounds=settings.bcrypt_rounds, semaphore=semaphore)
     async with uow:
         actor = await exigir_admin(uow, actor_id)
@@ -101,9 +92,20 @@ async def crear_personal(uow, actor_id, datos, settings, semaphore):
 
 
 async def listar_roles(uow, usuario_id):
-    if not await uow.usuarios.por_id(usuario_id):
-        raise HTTPException(404, 'Usuario no encontrado')
-    return await uow.usuarios.historial_roles(usuario_id)
+    async with uow:
+        if not await uow.usuarios.por_id(usuario_id):
+            raise HTTPException(404, 'Usuario no encontrado')
+        return await uow.usuarios.historial_roles(usuario_id)
+
+
+async def listar_eventos(uow, page, size):
+    async with uow:
+        return await uow.eventos.page(page, size)
+
+
+async def sesion_roles(uow, usuario_id):
+    async with uow:
+        return await uow.usuarios.roles_vigentes(usuario_id, ahora_utc())
 
 
 async def asignar_rol(uow, actor_id, usuario_id, datos):

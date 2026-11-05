@@ -6,18 +6,10 @@ import asyncio
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session
+from app.modules.ventas.unit_of_work import get_uow
 from app.modules.ventas import service
 from app.modules.ventas.schemas import VentaCreate, VentaRead
-from app.modules.usuarios.repository import UsuarioRepository
-from app.modules.usuarios.service import ahora_utc
-from app.modules.clientes.models import Cliente
-from sqlalchemy import select
-from app.core.paginacion import paginar
-from app.modules.ventas.models import Venta
-from fastapi import HTTPException
 
 logger = logging.getLogger("libreria.ventas")
 
@@ -44,9 +36,10 @@ async def enviar_comprobante(
 async def crear_venta(
     datos: VentaCreate,
     background_tasks: BackgroundTasks,
-    session: AsyncSession = Depends(get_session),
+    usuario=Depends(requiere_personal),
+    uow = Depends(get_uow),
 ) -> VentaRead:
-    venta = await service.crear_venta(session, datos)
+    venta = await service.crear_venta(uow, datos, usuario_id=usuario.id)
     respuesta = service.a_read(venta)
     background_tasks.add_task(
         enviar_comprobante,
@@ -61,9 +54,9 @@ async def crear_venta(
 async def listar_ventas(
     size: int = Query(20, ge=1, le=100),
     page: int = Query(1, ge=1),
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_uow),
 ) -> dict:
-    ventas = await service.listar_ventas(session, page, size)
+    ventas = await service.listar_ventas(uow, page, size)
     ventas["items"] = [service.a_read(venta) for venta in ventas["items"]]
     return ventas
 
@@ -72,12 +65,9 @@ async def listar_ventas(
 async def obtener_venta(
     venta_id: Annotated[int, Path(gt=0, le=2147483647)],
     usuario=Depends(get_usuario_actual),
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_uow),
 ) -> VentaRead:
-    venta = await service.obtener_venta(session, venta_id)
-    roles = await UsuarioRepository(session).roles_vigentes(usuario.id, ahora_utc())
-    if not set(roles).intersection(('ADMIN', 'VENDEDOR')) and venta.cliente.usuario_id != usuario.id:
-        raise HTTPException(403, 'No tiene permiso para consultar esta venta')
+    venta = await service.obtener_venta(uow, venta_id, usuario.id)
     return service.a_read(venta)
 
 
@@ -86,9 +76,8 @@ mis_ventas_router = APIRouter()
 
 @mis_ventas_router.get('/mis-ventas', response_model=Pagina[VentaRead])
 async def mis_ventas(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100),
-                     usuario=Depends(get_usuario_actual), session=Depends(get_session)):
-    pagina = await paginar(session, select(Venta).join(Cliente).where(Cliente.usuario_id == usuario.id)
-                           .options(*service.opciones_venta).order_by(Venta.id), page, size)
+                     usuario=Depends(get_usuario_actual), uow=Depends(get_uow)):
+    pagina = await service.mis_ventas(uow, usuario.id, page, size)
     pagina['items'] = [service.a_read(venta) for venta in pagina['items']]
     return pagina
 

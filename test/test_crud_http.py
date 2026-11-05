@@ -33,7 +33,10 @@ def sesion_vacia():
         scalar_one_or_none=lambda: SimpleNamespace(id=1),
         scalars=lambda: SimpleNamespace(unique=lambda: SimpleNamespace(all=lambda: []), all=lambda: []),
     )
-    return SimpleNamespace(scalar=AsyncMock(return_value=0), execute=AsyncMock(return_value=result))
+    async def scalar(query):
+        return 0 if 'count(' in str(query) else SimpleNamespace(id=1)
+    return SimpleNamespace(scalar=AsyncMock(side_effect=scalar), execute=AsyncMock(return_value=result),
+                          commit=AsyncMock(), rollback=AsyncMock())
 
 
 @pytest.mark.parametrize('ruta', LISTADOS)

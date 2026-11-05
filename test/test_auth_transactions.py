@@ -27,6 +27,7 @@ def test_hash_se_calcula_sin_transaccion_de_sesion(monkeypatch,cambio):
         class Uow:
             session=SimpleNamespace(rollback=rollback)
             usuarios=repo
+            terminar_lectura=staticmethod(rollback)
             async def __aenter__(self):
                 nonlocal active
                 active=True

@@ -3,9 +3,8 @@ from typing import Annotated
 from fastapi import Path
 from app.core.paginacion import Pagina
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session
+from app.modules.editoriales.unit_of_work import get_uow
 from app.modules.editoriales import service
 from app.modules.editoriales.schemas import (
     EditorialCreate,
@@ -13,6 +12,7 @@ from app.modules.editoriales.schemas import (
     EditorialUpdate,
 )
 from app.modules.libros import service as libros_service
+from app.modules.libros.unit_of_work import get_uow as get_libros_uow
 from app.modules.libros.schemas import LibroRead
 
 public_router = APIRouter(prefix="/editoriales", tags=["editoriales"])
@@ -23,9 +23,9 @@ protected_router = APIRouter(prefix="/editoriales", tags=["editoriales"])
 @protected_router.post("/", response_model=EditorialRead, status_code=201, dependencies=[Depends(requiere_admin)])
 async def crear_editorial(
     datos: EditorialCreate,
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_uow),
 ) -> EditorialRead:
-    editorial = await service.crear_editorial(session, datos)
+    editorial = await service.crear_editorial(uow, datos)
     return EditorialRead.model_validate(editorial, from_attributes=True)
 
 
@@ -33,9 +33,9 @@ async def crear_editorial(
 async def listar_editoriales(
     size: int = Query(20, ge=1, le=100),
     page: int = Query(1, ge=1),
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_uow),
 ) -> dict:
-    editoriales = await service.listar_editoriales(session, page, size)
+    editoriales = await service.listar_editoriales(uow, page, size)
     editoriales["items"] = [EditorialRead.model_validate(e, from_attributes=True) for e in editoriales["items"]]
     return editoriales
 
@@ -43,9 +43,9 @@ async def listar_editoriales(
 @public_router.get("/{editorial_id}", response_model=EditorialRead)
 async def obtener_editorial(
     editorial_id: Annotated[int, Path(gt=0, le=2147483647)],
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_uow),
 ) -> EditorialRead:
-    editorial = await service.obtener_editorial(session, editorial_id)
+    editorial = await service.obtener_editorial(uow, editorial_id)
     return EditorialRead.model_validate(editorial, from_attributes=True)
 
 
@@ -53,9 +53,9 @@ async def obtener_editorial(
 async def actualizar_editorial(
     editorial_id: Annotated[int, Path(gt=0, le=2147483647)],
     datos: EditorialUpdate,
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_uow),
 ) -> EditorialRead:
-    editorial = await service.actualizar_editorial(session, editorial_id, datos)
+    editorial = await service.actualizar_editorial(uow, editorial_id, datos)
     return EditorialRead.model_validate(editorial, from_attributes=True)
 
 
@@ -64,10 +64,10 @@ async def listar_libros_de_editorial(
     editorial_id: Annotated[int, Path(gt=0, le=2147483647)],
     size: int = Query(20, ge=1, le=100),
     page: int = Query(1, ge=1),
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_libros_uow),
 ) -> dict:
     libros = await libros_service.listar_libros_de_editorial(
-        session, editorial_id, page, size
+        uow, editorial_id, page, size
     )
     libros["items"] = [LibroRead.model_validate(libro, from_attributes=True) for libro in libros["items"]]
     return libros

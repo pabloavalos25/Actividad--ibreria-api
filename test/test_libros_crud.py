@@ -9,6 +9,8 @@ from app.modules.ventas.models import Venta
 from app.modules.libros import service
 from app.modules.libros.schemas import LibroCreate
 from app.modules.libros.models import MovimientoStock
+from app.modules.libros.unit_of_work import LibrosUnitOfWork
+from app.modules.libros.repository import LibroRepository
 from test_crud_http import cliente, sesion_vacia
 
 
@@ -23,9 +25,9 @@ def test_alta_sin_sesion_autenticada_falla_cerrada(stock):
 def test_alta_registra_movimiento_solo_si_stock_no_cero(monkeypatch,stock):
     async def scenario():
         session=SimpleNamespace(add=Mock(),commit=AsyncMock(),flush=AsyncMock(),rollback=AsyncMock())
-        monkeypatch.setattr(service,'obtener_libro',AsyncMock(return_value='libro-creado'))
+        monkeypatch.setattr(LibroRepository,'con_detalle',AsyncMock(return_value='libro-creado'))
         datos=LibroCreate(isbn='1',titulo='L',precio='2.50',stock_inicial=stock,editorial_id=1)
-        assert await service.crear_libro(session,datos,usuario_id=7) == 'libro-creado'
+        assert await service.crear_libro(LibrosUnitOfWork(session),datos,usuario_id=7) == 'libro-creado'
         libro=session.add.call_args_list[0].args[0]
         assert libro.stock == stock
         movimientos=[c.args[0] for c in session.add.call_args_list if isinstance(c.args[0],MovimientoStock)]
@@ -34,7 +36,7 @@ def test_alta_registra_movimiento_solo_si_stock_no_cero(monkeypatch,stock):
             assert movimientos[0].usuario_id == 7
             assert movimientos[0].cantidad == stock
             assert movimientos[0].motivo == 'Stock inicial'
-            assert movimientos[0].libro is libro
+            assert movimientos[0].libro_id == libro.id
         session.commit.assert_awaited_once()
     asyncio.run(scenario())
 
@@ -45,7 +47,8 @@ def test_baja_logica_204_o_404(monkeypatch,missing):
     obtener=AsyncMock(return_value=libro)
     if missing:
         obtener.side_effect=HTTPException(404,'Libro no encontrado')
-    monkeypatch.setattr(service,'obtener_libro',obtener)
+    monkeypatch.setattr(LibroRepository,'get_by_id',obtener)
+    monkeypatch.setattr(LibroRepository,'soft_delete',AsyncMock(side_effect=lambda book:setattr(book,'borrado_en',__import__('datetime').datetime.now(__import__('datetime').timezone.utc))))
     session=sesion_vacia()
     session.commit=AsyncMock()
     with cliente(session) as client:

@@ -220,3 +220,13 @@ Sigue el ejercicio 6: base de repositorios/UoW y conversión de los CRUD anterio
 ### Archivo OpenSpec del ejercicio 5
 
 Por pedido explícito del usuario, se archivó `ejercicio-5-roles-permisos` con cuatro tareas completas y validación estricta aprobada. La CLI sincronizó seis requisitos en `openspec/specs/autorizacion/spec.md` y creó `openspec/changes/archive/2026-11-05-ejercicio-5-roles-permisos/`. Se comprobó que propósito, requisitos y escenarios conservan exactamente el contenido del delta, normalizando sólo los saltos de línea y los encabezados propios de una especificación principal. `openspec validate --specs --strict`: **4 passed, 0 failed**; `openspec list --json`: sin cambios activos. La evidencia vigente sigue siendo **213 pruebas sin DB y 71 PostgreSQL**, sin nueva ejecución ni cambios de producción. OpenSpec continúa local e ignorado por Git; el commit y push del código se realizan separadamente en `master`.
+
+## Ejercicio 6 — repositorios, UoW e inventario
+
+Implementación completada en `master`: repositorios/UoW comunes y por módulo; servicios sin SQL ni sesión directa; stock compartido por alta, reposición y venta; movimientos con actor real y venta opcional; reposición e historial paginado sólo ADMIN. Ventas y descuentos revierten juntos ante fallos; baja e ISBN conservan historial. Contratos y endpoints en [PERSISTENCIA.md](PERSISTENCIA.md).
+
+La recuperación comenzó con código parcial y 1/5 tareas: 234 pruebas sin DB verdes, pero la primera suite PostgreSQL tuvo 75 verdes y 2 fallos de fixture por actor ORM expirado tras rollback. Se corrigieron los overrides para recargar el actor sobre la misma sesión de petición. Se detectó además que `UsuarioRepository.add` devolvía None; RED ejecutado (1 fallo/7 verdes), corrección mínima heredando el método base, GREEN 8/8 y triangulación con dos usuarios. No se inventa evidencia RED de la implementación anterior. Las pruebas ampliadas cubren venta multilibro, historial tras vaciar identity map, rollback después de flush de movimiento, ISBN y permisos reales CLIENTE/VENDEDOR.
+
+Validación final: **236 passed in 15.96s** sin DB y **83 passed in 41.29s** PostgreSQL. Cluster propio `tmp/postgres-tests-9354a085a777`, puerto **54553**, detenido y sin `postmaster.pid`. Upgrade/check/downgrade base/upgrade/check sin diferencias ni restos en base. OpenSpec `all_done`, **5/5 tareas**, validación estricta del change aprobada; specs principales **4/4** válidas. `git diff --check` limpio. Evidencia detallada local en `openspec/changes/ejercicio-6-repositorios-uow-stock/verification.md`.
+
+Sin archivo, commit ni push. Concurrencia del ejercicio 7 y seed ampliado/casos posteriores del 8 siguen pendientes. No se tocaron `.env`, `despliegue/`, modelos ni migraciones.

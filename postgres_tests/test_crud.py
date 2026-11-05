@@ -32,19 +32,22 @@ async def api(config):
                 user=Usuario(email='actor-ej3@example.test',nombre='Actor',password_hash='hash')
                 editorial=Editorial(nombre='Editorial ej3',pais='AR')
                 session.add_all([user,editorial]); await session.commit()
+                user_id = user.id
                 app=FastAPI()
                 for name in ['libros','ventas','autores','editoriales','generos','clientes']:
                     app.include_router(import_module(f'app.modules.{name}.router').router)
                 app.dependency_overrides[get_session]=lambda:session
-                app.dependency_overrides[requerir_usuario_id]=lambda:user.id
-                app.dependency_overrides[requiere_admin]=lambda:user
-                app.dependency_overrides[requiere_personal]=lambda:user
-                app.dependency_overrides[get_usuario_actual]=lambda:user
+                app.dependency_overrides[requerir_usuario_id]=lambda:user_id
+                async def actor_actual():
+                    return await session.get(Usuario, user_id)
+                app.dependency_overrides[requiere_admin]=actor_actual
+                app.dependency_overrides[requiere_personal]=actor_actual
+                app.dependency_overrides[get_usuario_actual]=actor_actual
                 from app.modules.usuarios.models import AsignacionRol
                 session.add(AsignacionRol(usuario_id=user.id, rol='ADMIN'))
                 await session.commit()
                 async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as client:
-                    yield client,session,editorial.id,user.id
+                    yield client,session,editorial.id,user_id
             await transaction.rollback()
     finally:
         await engine.dispose()

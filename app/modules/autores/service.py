@@ -1,71 +1,40 @@
-from app.core.paginacion import paginar
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
-
 from app.core.errors import no_encontrado
 from app.modules.autores.models import Autor
-from app.modules.autores.schemas import AutorCreate, AutorUpdate, LibroConRol
-from app.modules.libros.models import Libro, LibroAutor
 
 
-async def crear_autor(session: AsyncSession, datos: AutorCreate) -> Autor:
-    autor = Autor.model_validate(datos, from_attributes=True)
-    session.add(autor)
-    await session.commit()
-    await session.refresh(autor)
-    return autor
+async def crear_autor(uow, datos):
+    async with uow:
+        entity = Autor.model_validate(datos, from_attributes=True)
+        await uow.autores.add(entity)
+    return entity
 
 
-async def obtener_autor(session: AsyncSession, autor_id: int) -> Autor:
-    result = await session.execute(select(Autor).where(Autor.id == autor_id))
-    autor = result.scalar_one_or_none()
-    if autor is None:
-        raise no_encontrado("Autor no encontrado")
-    return autor
+async def obtener_autor(uow, autor_id):
+    async with uow:
+        entity = await uow.autores.get_by_id(autor_id)
+        if entity is None:
+            raise no_encontrado('Autor no encontrado')
+    return entity
 
 
-async def actualizar_autor(
-    session: AsyncSession,
-    autor_id: int,
-    datos: AutorUpdate,
-) -> Autor:
-    autor = await obtener_autor(session, autor_id)
-    for campo, valor in datos.model_dump(exclude_unset=True).items():
-        setattr(autor, campo, valor)
-    session.add(autor)
-    await session.commit()
-    await session.refresh(autor)
-    return autor
+async def actualizar_autor(uow, autor_id, datos):
+    async with uow:
+        entity = await uow.autores.get_by_id(autor_id)
+        if entity is None:
+            raise no_encontrado('Autor no encontrado')
+        for field, value in datos.model_dump(exclude_unset=True).items():
+            setattr(entity, field, value)
+        await uow.autores.update(entity)
+    return entity
 
 
-async def listar_libros_de_autor(
-    session: AsyncSession,
-    autor_id: int,
-    page: int,
-    size: int,
-) -> dict:
-    await obtener_autor(session, autor_id)
-    pagina = await paginar(
-        session,
-        select(LibroAutor).join(Libro)
-        .where(LibroAutor.autor_id == autor_id, Libro.borrado_en.is_(None))
-        .options(joinedload(LibroAutor.libro))
-        .order_by(LibroAutor.orden, LibroAutor.libro_id),
-        page,
-        size,
-    )
-    pagina["items"] = [
-        LibroConRol(
-            libro_id=autoria.libro_id,
-            isbn=autoria.libro.isbn,
-            titulo=autoria.libro.titulo,
-            precio=autoria.libro.precio,
-            stock=autoria.libro.stock,
-            rol=autoria.rol,
-            orden=autoria.orden,
-        )
-        for autoria in pagina["items"]
-    ]
-
-    return pagina
+async def listar_libros_de_autor(uow, autor_id, page, size):
+    from app.modules.autores.schemas import LibroConRol
+    async with uow:
+        if await uow.autores.get_by_id(autor_id) is None:
+            raise no_encontrado('Autor no encontrado')
+        pagina = await uow.autores.libros_con_autoria(autor_id, page, size)
+        pagina['items'] = [LibroConRol(libro_id=a.libro_id, isbn=a.libro.isbn,
+            titulo=a.libro.titulo, precio=a.libro.precio, stock=a.libro.stock,
+            rol=a.rol, orden=a.orden) for a in pagina['items']]
+        return pagina

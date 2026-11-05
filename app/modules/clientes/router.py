@@ -3,9 +3,8 @@ from typing import Annotated
 from fastapi import Path
 from app.core.paginacion import Pagina
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session
+from app.modules.clientes.unit_of_work import get_uow
 from app.modules.clientes import service
 from app.modules.clientes.schemas import (
     ClienteCreate,
@@ -15,6 +14,7 @@ from app.modules.clientes.schemas import (
     PerfilRead,
 )
 from app.modules.ventas import service as ventas_service
+from app.modules.ventas.unit_of_work import get_uow as get_ventas_uow
 from app.modules.ventas.schemas import VentaRead
 
 public_router = APIRouter(prefix="/clientes", tags=["clientes"])
@@ -25,18 +25,18 @@ protected_router = APIRouter(prefix="/clientes", tags=["clientes"])
 @protected_router.post("/", response_model=ClienteRead, status_code=201, dependencies=[Depends(requiere_personal)])
 async def crear_cliente(
     datos: ClienteCreate,
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_uow),
 ) -> ClienteRead:
-    cliente = await service.crear_cliente(session, datos)
+    cliente = await service.crear_cliente(uow, datos)
     return service.a_read(cliente)
 
 
 @protected_router.get("/{cliente_id}", response_model=ClienteRead, dependencies=[Depends(requiere_personal)])
 async def obtener_cliente(
     cliente_id: Annotated[int, Path(gt=0, le=2147483647)],
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_uow),
 ) -> ClienteRead:
-    cliente = await service.obtener_cliente(session, cliente_id)
+    cliente = await service.obtener_cliente(uow, cliente_id)
     return service.a_read(cliente)
 
 
@@ -44,9 +44,9 @@ async def obtener_cliente(
 async def actualizar_cliente(
     cliente_id: Annotated[int, Path(gt=0, le=2147483647)],
     datos: ClienteUpdate,
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_uow),
 ) -> ClienteRead:
-    cliente = await service.actualizar_cliente(session, cliente_id, datos)
+    cliente = await service.actualizar_cliente(uow, cliente_id, datos)
     return service.a_read(cliente)
 
 
@@ -54,9 +54,9 @@ async def actualizar_cliente(
 async def crear_perfil(
     cliente_id: Annotated[int, Path(gt=0, le=2147483647)],
     datos: PerfilCreate,
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_uow),
 ) -> PerfilRead:
-    perfil = await service.crear_perfil(session, cliente_id, datos)
+    perfil = await service.crear_perfil(uow, cliente_id, datos)
     return service.perfil_a_read(perfil)
 
 
@@ -65,10 +65,10 @@ async def listar_ventas_de_cliente(
     cliente_id: Annotated[int, Path(gt=0, le=2147483647)],
     size: int = Query(20, ge=1, le=100),
     page: int = Query(1, ge=1),
-    session: AsyncSession = Depends(get_session),
+    uow = Depends(get_ventas_uow),
 ) -> dict:
     ventas = await ventas_service.listar_ventas_de_cliente(
-        session, cliente_id, page, size
+        uow, cliente_id, page, size
     )
     ventas["items"] = [ventas_service.a_read(venta) for venta in ventas["items"]]
     return ventas

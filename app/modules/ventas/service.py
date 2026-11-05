@@ -1,107 +1,61 @@
-from app.core.paginacion import paginar
 from decimal import Decimal
-
 from fastapi import HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
-
-from app.core.errors import conflicto_de_integridad, no_encontrado
-from app.modules.clientes import service as clientes_service
-from app.modules.libros.models import Libro
-from app.modules.ventas.models import RenglonVenta, Venta
-from app.modules.ventas.schemas import (
-    ClienteRef,
-    RenglonRead,
-    VentaCreate,
-    VentaRead,
-)
-
-opciones_venta = (
-    joinedload(Venta.cliente),
-    selectinload(Venta.renglones).joinedload(RenglonVenta.libro),
-)
+from app.core.errors import no_encontrado
+from app.modules.libros.stock import modificar_stock
+from app.modules.ventas.models import Venta, RenglonVenta
+from app.modules.ventas.schemas import VentaRead, ClienteRef, RenglonRead
+from app.modules.usuarios.service import ahora_utc
 
 
-async def crear_venta(session: AsyncSession, datos: VentaCreate) -> Venta:
-    libro_ids = [r.libro_id for r in datos.renglones]
-    result = await session.execute(
-        select(Libro).where(Libro.id.in_(libro_ids), Libro.borrado_en.is_(None))
-    )
-    libros = {libro.id: libro for libro in result.scalars().all()}
-
-    total = Decimal("0")
-    renglones: list[RenglonVenta] = []
-    for item in datos.renglones:
-        libro = libros.get(item.libro_id)
-        if libro is None:
-            raise HTTPException(
-                status_code=409,
-                detail="No se pudo registrar la venta: cliente o libros invalidos",
-            )
-        total += libro.precio * item.cantidad
-        renglones.append(
-            RenglonVenta(
-                libro_id=item.libro_id,
-                cantidad=item.cantidad,
-                precio_unitario=libro.precio,
-            )
-        )
-
-    venta = Venta(cliente_id=datos.cliente_id, total=total, renglones=renglones)
-    session.add(venta)
-    async with conflicto_de_integridad(
-        session, "No se pudo registrar la venta: cliente o libros invalidos"
-    ):
-        await session.commit()
-    return await obtener_venta(session, venta.id)
-
-
-async def listar_ventas(
-    session: AsyncSession,
-    page: int,
-    size: int,
-) -> dict:
-    pagina = await paginar(
-        session,
-        select(Venta)
-        .options(*opciones_venta)
-        .order_by(Venta.id),
-        page,
-        size,
-    )
-    return pagina
-
-
-async def obtener_venta(session: AsyncSession, venta_id: int) -> Venta:
-    result = await session.execute(
-        select(Venta)
-        .where(Venta.id == venta_id)
-        .options(*opciones_venta)
-    )
-    venta = result.scalar_one_or_none()
-    if venta is None:
-        raise no_encontrado("Venta no encontrada")
+async def crear_venta(uow, datos, *, usuario_id):
+    async with uow:
+        if await uow.clientes.get_by_id(datos.cliente_id) is None:
+            raise HTTPException(409, 'Cliente inexistente')
+        libros = {libro.id: libro for libro in await uow.libros.vigentes_por_ids([r.libro_id for r in datos.renglones])}
+        total = Decimal('0')
+        renglones = []
+        for item in datos.renglones:
+            libro = libros.get(item.libro_id)
+            if libro is None or libro.stock < item.cantidad:
+                raise HTTPException(409, 'Libro no disponible o stock insuficiente')
+            total += libro.precio * item.cantidad
+            renglones.append(RenglonVenta(libro_id=libro.id, cantidad=item.cantidad, precio_unitario=libro.precio))
+        if total > Decimal('9999999999.99'):
+            raise HTTPException(422, 'Total fuera de los límites permitidos')
+        venta = Venta(cliente_id=datos.cliente_id, total=total, renglones=renglones)
+        await uow.ventas.add(venta)
+        for item in datos.renglones:
+            await modificar_stock(uow, libros[item.libro_id], -item.cantidad, 'Venta', usuario_id, venta.id)
+        venta = await uow.ventas.con_cliente_renglones_libros(venta.id)
     return venta
 
 
-async def listar_ventas_de_cliente(
-    session: AsyncSession,
-    cliente_id: int,
-    page: int,
-    size: int,
-) -> dict:
-    await clientes_service.obtener_cliente(session, cliente_id)
-    pagina = await paginar(
-        session,
-        select(Venta)
-        .where(Venta.cliente_id == cliente_id)
-        .options(*opciones_venta)
-        .order_by(Venta.id),
-        page,
-        size,
-    )
-    return pagina
+async def listar_ventas(uow, page, size):
+    async with uow:
+        return await uow.ventas.con_detalles(page, size)
+
+
+async def obtener_venta(uow, venta_id, usuario_id):
+    async with uow:
+        venta = await uow.ventas.con_cliente_renglones_libros(venta_id)
+        if venta is None:
+            raise no_encontrado('Venta no encontrada')
+        roles = await uow.usuarios.roles_vigentes(usuario_id, ahora_utc())
+        if not set(roles).intersection(('ADMIN','VENDEDOR')) and venta.cliente.usuario_id != usuario_id:
+            raise HTTPException(403, 'No tiene permiso para consultar esta venta')
+    return venta
+
+
+async def listar_ventas_de_cliente(uow, cliente_id, page, size):
+    async with uow:
+        if await uow.clientes.get_by_id(cliente_id) is None:
+            raise no_encontrado('Cliente no encontrado')
+        return await uow.ventas.con_detalles(page, size, cliente_id=cliente_id)
+
+
+async def mis_ventas(uow, usuario_id, page, size):
+    async with uow:
+        return await uow.ventas.con_detalles(page, size, usuario_id=usuario_id)
 
 
 def a_read(venta: Venta) -> VentaRead:

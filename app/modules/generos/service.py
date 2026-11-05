@@ -1,40 +1,22 @@
-from app.core.paginacion import paginar
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.errors import conflicto_de_integridad, no_encontrado
+from app.core.errors import no_encontrado
 from app.modules.generos.models import Genero
-from app.modules.generos.schemas import GeneroCreate
 
 
-async def crear_genero(session: AsyncSession, datos: GeneroCreate) -> Genero:
-    genero = Genero.model_validate(datos, from_attributes=True)
-    session.add(genero)
-    async with conflicto_de_integridad(
-        session, "Ya existe un genero con ese nombre"
-    ):
-        await session.commit()
-    await session.refresh(genero)
-    return genero
+async def crear_genero(uow, datos):
+    async with uow:
+        entity = Genero.model_validate(datos, from_attributes=True)
+        await uow.generos.add(entity)
+    return entity
 
 
-async def listar_generos(
-    session: AsyncSession,
-    page: int,
-    size: int,
-) -> dict:
-    pagina = await paginar(
-        session,
-        select(Genero).order_by(Genero.id),
-        page,
-        size,
-    )
-    return pagina
+async def obtener_genero(uow, genero_id):
+    async with uow:
+        entity = await uow.generos.get_by_id(genero_id)
+        if entity is None:
+            raise no_encontrado('Genero no encontrado')
+    return entity
 
 
-async def obtener_genero(session: AsyncSession, genero_id: int) -> Genero:
-    result = await session.execute(select(Genero).where(Genero.id == genero_id))
-    genero = result.scalar_one_or_none()
-    if genero is None:
-        raise no_encontrado("Genero no encontrado")
-    return genero
+async def listar_generos(uow, page, size):
+    async with uow:
+        return await uow.generos.page(page, size)

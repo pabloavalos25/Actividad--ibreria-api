@@ -148,3 +148,7 @@ Las entradas rechazan campos extra. `PATCH /libros/{id}` admite solamente títul
 **Integración pendiente con ejercicio 4:** `POST /libros/` requiere `requerir_usuario_id`, que por ahora responde 401 siempre. No hay usuario ficticio, ID enviado por cliente ni cabecera que evite el control. Al conectar cookie/usuario/roles, esa dependencia debe devolver el ID real; las pruebas ASGI/PostgreSQL ya sustituyen la dependencia por un usuario existente y verifican 201, movimiento inicial y rollback. Stock inicial cero no genera movimiento porque su cantidad no puede ser cero. El registro de usuarios y sus DTO se incorporarán junto con autenticación; no se afirma que ese criterio transversal ya está terminado.
 
 La migración de servicios a repositorios/UoW corresponde al ejercicio 6. El contrato de stock inicial no significa que ya está resuelta toda la lógica de stock/ventas. Evidencia y límites en [progreso](docs/PROGRESO_PARCIAL_CAP1A6.md).
+
+## Estado actual: ejercicio 6
+
+Los apartados anteriores describen la evolución de los primeros ejercicios. Actualmente la autenticación, los permisos y el flujo Router → Service → UoW → Repository → Model están implementados. Todos los servicios usan UoW y repositorios; las ventas descuentan stock y guardan movimientos en la misma transacción. ADMIN puede reponer existencias y consultar su historial paginado. Los contratos, endpoints y comandos de verificación se documentan en [persistencia e inventario](docs/PERSISTENCIA.md). La concurrencia y el seed ampliado siguen en los bloques posteriores.
