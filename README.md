@@ -4,7 +4,7 @@ API asincrónica con FastAPI, SQLModel y PostgreSQL. Continúa el TP de capítul
 
 Integrantes: Pablo Avalos, Ismael Suarez y Sofia Blangetti.
 
-El parcial está en desarrollo. Están implementados los ejercicios 1 a 5: configuración, modelos/migraciones, contratos/CRUD/paginación, autenticación y autorización. Quedan la migración general a repositorios/UoW, stock/ventas atómicas, seed ampliado y los casos C completos. Ver [progreso y evidencia TDD](docs/PROGRESO_PARCIAL_CAP1A6.md) y [requisitos completos](docs/REQUISITOS_PARCIAL_CAP1A6.md).
+El parcial está en desarrollo. Están implementados los ejercicios 1 a 8: configuración, modelos/migraciones, contratos/CRUD/paginación, acceso, repositorios/UoW, inventario, integridad y lecturas/asincronía. El contenedor del TP original (ejercicio 9) está construido y verificado localmente; su operación está documentada en [DEPLOY.md](despliegue/DEPLOY.md). Siguen pendientes seed ampliado, materiales globales de entrega y VPS (ejercicio 10). Ver [progreso y evidencia TDD](docs/PROGRESO_PARCIAL_CAP1A6.md) y [requisitos completos](docs/REQUISITOS_PARCIAL_CAP1A6.md).
 
 ## Acceso (ejercicio 4)
 

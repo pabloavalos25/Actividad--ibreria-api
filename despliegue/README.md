@@ -1,5 +1,14 @@
 # Librería API
 
+## Contenedor del TP (ejercicio 9)
+
+La preparación con Docker, configuración externa y comprobaciones reproducibles
+está en [DEPLOY.md](DEPLOY.md). El contexto de build es esta carpeta; PostgreSQL
+permanece externo y no se usa Compose ni un contenedor de base en la entrega.
+Las instrucciones originales de desarrollo de este README se conservan como
+referencia del TP. La alternativa PostgreSQL en Docker que figura más abajo
+no corresponde a los ejercicios 9/10.
+
 ![Python 3.13](https://img.shields.io/badge/Python-3.13-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.143-green)
 ![PostgreSQL 17](https://img.shields.io/badge/PostgreSQL-17-blue)

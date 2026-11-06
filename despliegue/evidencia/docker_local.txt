@@ -1,0 +1,1017 @@
+Ejercicio 9: evidencia LOCAL real; no acredita VPS ni seed. Credenciales temporales sin secretos reales.
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe version --format "{{.Client.Version}} / {{.Server.Version}}"
+29.9.2 / 29.9.2
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe build --progress=plain -t codex-tp-1fdfdcec7b17 C:\Users\sofav\OneDrive\Desktop\Actividad--ibreria-api\despliegue
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 599B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.12-alpine
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 235B done
+#3 DONE 0.0s
+
+#4 [1/9] FROM docker.io/library/python:3.12-alpine@sha256:213242b537a1c166a0c53e903461fc18d5518e7196c93dbecda452660a848918
+#4 resolve docker.io/library/python:3.12-alpine@sha256:213242b537a1c166a0c53e903461fc18d5518e7196c93dbecda452660a848918 0.0s done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 2.72kB done
+#5 DONE 0.0s
+
+#6 [4/9] RUN python -m pip install --no-cache-dir --only-binary=:all: -r requirements.txt
+#6 CACHED
+
+#7 [8/9] COPY alembic.ini seed.py docker-entrypoint.sh healthcheck.py ./
+#7 CACHED
+
+#8 [5/9] RUN addgroup -S app && adduser -S -G app app
+#8 CACHED
+
+#9 [6/9] COPY app/ ./app/
+#9 CACHED
+
+#10 [7/9] COPY migrations/ ./migrations/
+#10 CACHED
+
+#11 [3/9] COPY requirements.txt ./
+#11 CACHED
+
+#12 [2/9] WORKDIR /app
+#12 CACHED
+
+#13 [9/9] RUN chmod 755 /app/docker-entrypoint.sh
+#13 CACHED
+
+#14 exporting to image
+#14 exporting layers done
+#14 exporting manifest sha256:d5232922e95e7cfb718474b396bbac97f4fe3b83a11d0da591588afc1789c10a done
+#14 exporting config sha256:152fb9fea2e56c35636682a5996f026954a34af19c7b97f7a8e8506b61ecb39b done
+#14 exporting attestation manifest sha256:a7c0908e3c7ea7b64729d270a84d69fc4f654c8170d459bc4549bb4817734913 0.0s done
+#14 exporting manifest list sha256:e085318c96a8d31872882fd32f32c384603925fbc02e1b05a87fe29b7e712d7b 0.0s done
+#14 naming to docker.io/library/codex-tp-1fdfdcec7b17:latest done
+#14 unpacking to docker.io/library/codex-tp-1fdfdcec7b17:latest
+#14 unpacking to docker.io/library/codex-tp-1fdfdcec7b17:latest 2.1s done
+#14 DONE 2.2s
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe image inspect python:3.12-alpine
+[
+    {
+        "Id": "sha256:213242b537a1c166a0c53e903461fc18d5518e7196c93dbecda452660a848918",
+        "RepoTags": [
+            "python:3.12-alpine"
+        ],
+        "RepoDigests": [
+            "python@sha256:213242b537a1c166a0c53e903461fc18d5518e7196c93dbecda452660a848918"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-11-05T19:31:20.843028611Z",
+        "Config": {
+            "Env": [
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+                "PYTHON_VERSION=3.12.16",
+                "PYTHON_SHA256=b5796915dc45ff745cfb4e990a7e7c93d6f546328a102ce31448d69ebc37575c"
+            ],
+            "Cmd": [
+                "python3"
+            ],
+            "WorkingDir": "/"
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 74102118,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:75f1d9657d880da5f75298e8f40e9928bb6e260c50d26f97af196845307e3064",
+                "sha256:d6c38381cc85b3dfb2dc52f4ad75386f844a220358291e69c060b0c6bda7f493",
+                "sha256:c55c05421254604f61c029616b7e7f3de8d875d262a12f30ead74640bc93398a",
+                "sha256:33245a72efc0b5e9c6338ed25da088588bda96f70b9a58e02de970f1a72a55a4"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-11-06T00:52:04.974473221Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:213242b537a1c166a0c53e903461fc18d5518e7196c93dbecda452660a848918",
+            "size": 10301
+        },
+        "Identity": {
+            "Pull": [
+                {
+                    "Repository": "docker.io/library/python"
+                }
+            ]
+        }
+    }
+]
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe image inspect codex-tp-1fdfdcec7b17
+[
+    {
+        "Id": "sha256:e085318c96a8d31872882fd32f32c384603925fbc02e1b05a87fe29b7e712d7b",
+        "RepoTags": [
+            "codex-tp-1fdfdcec7b17:latest"
+        ],
+        "RepoDigests": [
+            "codex-tp-1fdfdcec7b17@sha256:e085318c96a8d31872882fd32f32c384603925fbc02e1b05a87fe29b7e712d7b"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-11-06T00:54:21.15319352Z",
+        "Config": {
+            "User": "app",
+            "ExposedPorts": {
+                "8000/tcp": {}
+            },
+            "Env": [
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+                "PYTHON_VERSION=3.12.16",
+                "PYTHON_SHA256=b5796915dc45ff745cfb4e990a7e7c93d6f546328a102ce31448d69ebc37575c",
+                "PYTHONDONTWRITEBYTECODE=1",
+                "PYTHONUNBUFFERED=1"
+            ],
+            "Entrypoint": [
+                "/app/docker-entrypoint.sh"
+            ],
+            "WorkingDir": "/app",
+            "Healthcheck": {
+                "Test": [
+                    "CMD",
+                    "python",
+                    "/app/healthcheck.py"
+                ],
+                "Interval": 5000000000,
+                "Timeout": 3000000000,
+                "StartPeriod": 10000000000,
+                "Retries": 3
+            }
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 249753877,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:75f1d9657d880da5f75298e8f40e9928bb6e260c50d26f97af196845307e3064",
+                "sha256:d6c38381cc85b3dfb2dc52f4ad75386f844a220358291e69c060b0c6bda7f493",
+                "sha256:c55c05421254604f61c029616b7e7f3de8d875d262a12f30ead74640bc93398a",
+                "sha256:33245a72efc0b5e9c6338ed25da088588bda96f70b9a58e02de970f1a72a55a4",
+                "sha256:82b0e3066a38850a8d2f50facb7760f331b164867379d668d001ed8b127d10d7",
+                "sha256:c75d90f4209de89568c8cdcbbd4d95d73b31667d4416f4da5d75a5f66ebce6ce",
+                "sha256:2409e53b295934f57f0aedd624683aac2d28ad8c43750503b7439979eb1d5318",
+                "sha256:2e21401801b04935a95c64f4085da56d5740b234c07308a6a3a556997a18067f",
+                "sha256:bcdfbeca78b6ac78ca9f0c635cc0d8dad4536062fe06c33929aaf63432696157",
+                "sha256:da3bfd2a8d17887814a41a27623a2d06047d127696ed3cd3e068e4dec4a7d3aa",
+                "sha256:0eea92ebdfb86fa184321c266f89ff2df8ad20be041c2a23156a7eb4107227f2",
+                "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-11-06T00:56:23.69131233Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:e085318c96a8d31872882fd32f32c384603925fbc02e1b05a87fe29b7e712d7b",
+            "size": 856
+        },
+        "Identity": {
+            "Build": [
+                {
+                    "Ref": "gnml8f98g9vc0udyecuup7r2b",
+                    "CreatedAt": "2026-11-06T00:56:25.812206606Z"
+                }
+            ]
+        }
+    }
+]
+D-01 base_bytes=74102118 final_bytes=249753877 base_id=sha256:213242b537a1c166a0c53e903461fc18d5518e7196c93dbecda452660a848918
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe history --no-trunc codex-tp-1fdfdcec7b17
+IMAGE                                                                     CREATED         CREATED BY                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   SIZE      COMMENT
+sha256:e085318c96a8d31872882fd32f32c384603925fbc02e1b05a87fe29b7e712d7b   2 minutes ago   ENTRYPOINT ["/app/docker-entrypoint.sh"]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     0B        buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   HEALTHCHECK {Test:[CMD python /app/healthcheck.py] Interval:5s Timeout:3s StartPeriod:10s StartInterval:0s Retries:3}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        0B        buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   EXPOSE [8000/tcp]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            0B        buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   USER app                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     0B        buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   RUN /bin/sh -c chmod 755 /app/docker-entrypoint.sh # buildkit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                4.1kB     buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   COPY alembic.ini seed.py docker-entrypoint.sh healthcheck.py ./ # buildkit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   28.7kB    buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   COPY migrations/ ./migrations/ # buildkit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    41kB      buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   COPY app/ ./app/ # buildkit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  172kB     buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   RUN /bin/sh -c addgroup -S app && adduser -S -G app app # buildkit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           41kB      buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   RUN /bin/sh -c python -m pip install --no-cache-dir --only-binary=:all: -r requirements.txt # buildkit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       136MB     buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   COPY requirements.txt ./ # buildkit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          12.3kB    buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   WORKDIR /app                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 8.19kB    buildkit.dockerfile.v0
+<missing>                                                                 2 minutes ago   ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             0B        buildkit.dockerfile.v0
+<missing>                                                                 5 hours ago     CMD ["python3"]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              0B        buildkit.dockerfile.v0
+<missing>                                                                 5 hours ago     RUN /bin/sh -c set -eux;  for src in idle3 pip3 pydoc3 python3 python3-config; do   dst="$(echo "$src" | tr -d 3)";   [ -s "/usr/local/bin/$src" ];   [ ! -e "/usr/local/bin/$dst" ];   ln -svT "$src" "/usr/local/bin/$dst";  done # buildkit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               16.4kB    buildkit.dockerfile.v0
+<missing>                                                                 5 hours ago     RUN /bin/sh -c set -eux;   apk add --no-cache --virtual .build-deps   bluez-dev   bzip2-dev   dpkg-dev dpkg   findutils   g++   gcc   gdbm-dev   gnupg   libc-dev   libffi-dev   libnsl-dev   libtirpc-dev   linux-headers   make   ncurses-dev   openssl-dev   pax-utils   readline-dev   sqlite-dev   tar   tcl-dev   tk   tk-dev   util-linux-dev   xz   xz-dev   zlib-dev  ;   wget -O python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz";  echo "$PYTHON_SHA256 *python.tar.xz" | sha256sum -c -;  wget -O python.tar.xz.asc "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc";  GNUPGHOME="$(mktemp -d)"; export GNUPGHOME;  gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$GPG_KEY";  gpg --batch --verify python.tar.xz.asc python.tar.xz;  gpgconf --kill all;  rm -rf "$GNUPGHOME" python.tar.xz.asc;  mkdir -p /usr/src/python;  tar --extract --directory /usr/src/python --strip-components=1 --file python.tar.xz;  rm python.tar.xz;   cd /usr/src/python;  gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)";  ./configure   --build="$gnuArch"   --enable-loadable-sqlite-extensions   --enable-option-checking=fatal   --enable-shared   $(test "${gnuArch%%-*}" != 'riscv64' && echo '--with-lto')   --with-ensurepip  ;  nproc="$(nproc)";  EXTRA_CFLAGS="-DTHREAD_STACK_SIZE=0x100000";  LDFLAGS="${LDFLAGS:-} -Wl,--strip-all";  arch="$(apk --print-arch)";  case "$arch" in   x86_64|aarch64)    EXTRA_CFLAGS="${EXTRA_CFLAGS:-} -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer";    ;;   x86)    ;;   *)    EXTRA_CFLAGS="${EXTRA_CFLAGS:-} -fno-omit-frame-pointer";    ;;  esac;  make -j "$nproc"   "EXTRA_CFLAGS=${EXTRA_CFLAGS:-}"   "LDFLAGS=${LDFLAGS:-}"  ;  rm python;  make -j "$nproc"   "EXTRA_CFLAGS=${EXTRA_CFLAGS:-}"   "LDFLAGS=${LDFLAGS:-} -Wl,-rpath='\$\$ORIGIN/../lib'"   python  ;  make install;   cd /;  rm -rf /usr/src/python;   find /usr/local -depth   \(    \( -type d -a \( -name test -o -name tests -o -name idle_test \) \)    -o \( -type f -a \( -name '*.pyc' -o -name '*.pyo' -o -name 'libpython*.a' \) \)   \) -exec rm -rf '{}' +  ;   find /usr/local -type f -executable -not \( -name '*tkinter*' \) -exec scanelf --needed --nobanner --format '%n#p' '{}' ';'   | tr ',' '\n'   | sort -u   | awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }'   | xargs -rt apk add --no-network --virtual .python-rundeps  ;  apk del --no-network .build-deps;   export PYTHONDONTWRITEBYTECODE=1;  python3 --version;  pip3 --version # buildkit   44.1MB    buildkit.dockerfile.v0
+<missing>                                                                 6 hours ago     ENV PYTHON_SHA256=b5796915dc45ff745cfb4e990a7e7c93d6f546328a102ce31448d69ebc37575c                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           0B        buildkit.dockerfile.v0
+<missing>                                                                 6 hours ago     ENV PYTHON_VERSION=3.12.16                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   0B        buildkit.dockerfile.v0
+<missing>                                                                 6 hours ago     ENV GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         0B        buildkit.dockerfile.v0
+<missing>                                                                 6 hours ago     RUN /bin/sh -c set -eux;  apk add --no-cache   ca-certificates   tzdata  ; # buildkit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        2.81MB    buildkit.dockerfile.v0
+<missing>                                                                 6 hours ago     ENV LANG=C.UTF-8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             0B        buildkit.dockerfile.v0
+<missing>                                                                 6 hours ago     ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         0B        buildkit.dockerfile.v0
+<missing>                                                                 7 hours ago     CMD ["/bin/sh"]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              0B        buildkit.dockerfile.v0
+<missing>                                                                 7 hours ago     ADD alpine-minirootfs-3.24.4-x86_64.tar.gz / # buildkit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      9.09MB    buildkit.dockerfile.v0
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-transient-0 --rm --entrypoint python codex-tp-1fdfdcec7b17 -c "import os,pathlib,shutil; assert os.getuid()!=0; assert not pathlib.Path('/app/.env').exists(); assert 'DATABASE_URL' not in os.environ; assert len(list(pathlib.Path('/app/migrations/versions').glob('*.py')))==2; assert not any(shutil.which(c) for c in ('gcc','cc','make')); print('D-06/D-07 uid=',os.getuid(),'; sin .env/URL/compilador; dos migraciones')"
+D-06/D-07 uid= 100 ; sin .env/URL/compilador; dos migraciones
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe build --progress=plain --output type=local,dest=<TEMP>\context-export -f - <TEMP>\context
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 DONE 0.0s
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 61B done
+#1 DONE 0.0s
+
+#2 [internal] load .dockerignore
+#2 transferring context: 235B done
+#2 DONE 0.0s
+
+#3 [internal] load build context
+#3 transferring context: 3.12kB 0.0s done
+#3 DONE 0.0s
+
+#4 [1/1] COPY . /
+#4 DONE 0.0s
+
+#5 exporting to client directory
+#5 copying files 91.81kB 0.1s done
+#5 DONE 0.1s
+Contexto BuildKit: archivo visible presente; los cuatro señuelos excluidos realmente.
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-missing codex-tp-1fdfdcec7b17
+/app/docker-entrypoint.sh: line 4: DATABASE_URL: Falta DATABASE_URL en el entorno externo
+D-05 sin DATABASE_URL: salida no cero, sin servidor HTTP.
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-dead -e DATABASE_URL=postgresql+asyncpg://test@127.0.0.1:1/inaccesible codex-tp-1fdfdcec7b17
+Traceback (most recent call last):
+  File "/usr/local/bin/alembic", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/alembic/config.py", line 1039, in main
+    CommandLine(prog=prog).main(argv=argv)
+  File "/usr/local/lib/python3.12/site-packages/alembic/config.py", line 1029, in main
+    self.run_cmd(cfg, options)
+  File "/usr/local/lib/python3.12/site-packages/alembic/config.py", line 963, in run_cmd
+    fn(
+  File "/usr/local/lib/python3.12/site-packages/alembic/command.py", line 487, in upgrade
+    script.run_env()
+  File "/usr/local/lib/python3.12/site-packages/alembic/script/base.py", line 550, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "/usr/local/lib/python3.12/site-packages/alembic/util/pyfiles.py", line 114, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/alembic/util/pyfiles.py", line 132, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/migrations/env.py", line 77, in <module>
+    run_migrations_online()
+  File "/app/migrations/env.py", line 71, in run_migrations_online
+    asyncio.run(run_async_migrations())
+  File "/usr/local/lib/python3.12/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/app/migrations/env.py", line 53, in run_async_migrations
+    async with connectable.connect() as connection:
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/base.py", line 152, in __aenter__
+    return await self.start(is_ctxmanager=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/engine.py", line 275, in start
+    await greenlet_spawn(self.sync_engine.connect)
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3311, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 149, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3335, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1326, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 307, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 921, in __connect
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 917, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 642, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 955, in connect
+    await_only(creator_fn(*arg, **kw)),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/asyncpg/connection.py", line 2498, in connect
+    return await connect_utils._connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/asyncpg/connect_utils.py", line 1307, in _connect
+    raise last_error or exceptions.TargetServerAttributeNotMatched(
+  File "/usr/local/lib/python3.12/site-packages/asyncpg/connect_utils.py", line 1278, in _connect
+    conn = await _connect_addr(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/asyncpg/connect_utils.py", line 1092, in _connect_addr
+    return await __connect_addr(params, True, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/asyncpg/connect_utils.py", line 1162, in __connect_addr
+    tr, pr = await connector
+             ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/asyncpg/connect_utils.py", line 996, in _create_ssl_connection
+    tr, pr = await loop.create_connection(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/asyncio/base_events.py", line 1132, in create_connection
+    raise exceptions[0]
+  File "/usr/local/lib/python3.12/asyncio/base_events.py", line 1107, in create_connection
+    sock = await self._connect_sock(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/asyncio/base_events.py", line 1010, in _connect_sock
+    await self.sock_connect(sock, address)
+  File "/usr/local/lib/python3.12/asyncio/selector_events.py", line 651, in sock_connect
+    return await fut
+           ^^^^^^^^^
+  File "/usr/local/lib/python3.12/asyncio/selector_events.py", line 691, in _sock_connect_cb
+    raise OSError(err, f'Connect call failed {address}')
+ConnectionRefusedError: [Errno 111] Connect call failed ('127.0.0.1', 1)
+Base inaccesible: salida no cero, sin servidor HTTP.
+$ "C:\Program Files\PostgreSQL\17\bin\initdb.exe" -D <TEMP>\data -U docker_test --auth=trust --encoding=UTF8 --no-locale
+The files belonging to this database system will be owned by user "sofav".
+This user must also own the server process.
+
+The database cluster will be initialized with locale "C".
+The default text search configuration will be set to "english".
+
+Data page checksums are disabled.
+
+creating directory C:/Users/sofav/OneDrive/Desktop/Actividad--ibreria-api/tmp/docker-tests-1fdfdcec7b17/data ... ok
+creating subdirectories ... ok
+selecting dynamic shared memory implementation ... windows
+selecting default "max_connections" ... 100
+selecting default "shared_buffers" ... 128MB
+selecting default time zone ... GMT
+creating configuration files ... ok
+running bootstrap script ... ok
+performing post-bootstrap initialization ... ok
+syncing data to disk ... ok
+
+Success. You can now start the database server using:
+
+    ^"C^:^\Program^ Files^\PostgreSQL^\17^\bin^\pg^_ctl^" -D ^"C^:^\Users^\sofav^\OneDrive^\Desktop^\Actividad^-^-ibreria^-api^\tmp^\docker^-tests^-1fdfdcec7b17^\data^" -l logfile start
+$ "C:\Program Files\PostgreSQL\17\bin\pg_ctl.exe" -D <TEMP>\data -l <TEMP>\postgres.log -o "-h 0.0.0.0 -p 60523 -c max_connections=20" -w start
+waiting for server to start.... done
+server started
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-transient-3 --rm --env-file <TEMP>\runtime.env --entrypoint alembic codex-tp-1fdfdcec7b17 upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 846f445b2248, esquema inicial sin genero
+INFO  [alembic.runtime.migration] Running upgrade 846f445b2248 -> 332ba12e013b, agrega genero y libro.genero_id
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-transient-4 --rm --env-file <TEMP>\runtime.env --entrypoint alembic codex-tp-1fdfdcec7b17 check
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.schemas
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.tables
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.types
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.constraints
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.defaults
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.comments
+INFO  [alembic.ddl.postgresql] Detected sequence named 'autor_id_seq' as owned by integer column 'autor(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'renglon_venta_id_seq' as owned by integer column 'renglon_venta(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'genero_id_seq' as owned by integer column 'genero(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'cliente_id_seq' as owned by integer column 'cliente(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'libro_id_seq' as owned by integer column 'libro(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'editorial_id_seq' as owned by integer column 'editorial(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'perfil_cliente_id_seq' as owned by integer column 'perfil_cliente(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'venta_id_seq' as owned by integer column 'venta(id)', assuming SERIAL and omitting
+No new upgrade operations detected.
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-transient-5 --rm --env-file <TEMP>\runtime.env --entrypoint alembic codex-tp-1fdfdcec7b17 downgrade base
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 332ba12e013b -> 846f445b2248, agrega genero y libro.genero_id
+INFO  [alembic.runtime.migration] Running downgrade 846f445b2248 -> , esquema inicial sin genero
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-transient-6 --rm --env-file <TEMP>\runtime.env --entrypoint alembic codex-tp-1fdfdcec7b17 upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 846f445b2248, esquema inicial sin genero
+INFO  [alembic.runtime.migration] Running upgrade 846f445b2248 -> 332ba12e013b, agrega genero y libro.genero_id
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-transient-7 --rm --env-file <TEMP>\runtime.env --entrypoint alembic codex-tp-1fdfdcec7b17 check
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.schemas
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.tables
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.types
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.constraints
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.defaults
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.comments
+INFO  [alembic.ddl.postgresql] Detected sequence named 'cliente_id_seq' as owned by integer column 'cliente(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'genero_id_seq' as owned by integer column 'genero(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'autor_id_seq' as owned by integer column 'autor(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'venta_id_seq' as owned by integer column 'venta(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'editorial_id_seq' as owned by integer column 'editorial(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'renglon_venta_id_seq' as owned by integer column 'renglon_venta(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'libro_id_seq' as owned by integer column 'libro(id)', assuming SERIAL and omitting
+INFO  [alembic.ddl.postgresql] Detected sequence named 'perfil_cliente_id_seq' as owned by integer column 'perfil_cliente(id)', assuming SERIAL and omitting
+No new upgrade operations detected.
+Migraciones TP: head/check/base vacío/head/check aprobados.
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-transient-8 --rm --env-file <TEMP>\runtime.env --entrypoint alembic codex-tp-1fdfdcec7b17 downgrade base
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 332ba12e013b -> 846f445b2248, agrega genero y libro.genero_id
+INFO  [alembic.runtime.migration] Running downgrade 846f445b2248 -> , esquema inicial sin genero
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-app1 -d --env-file <TEMP>\runtime.env -p 127.0.0.1:60524:8000 --restart unless-stopped codex-tp-1fdfdcec7b17
+ef42e9a6fa6b719ac6aabe0222a4c4c52595d82ba9c482f87b47619a602435f2
+HEALTHY codex-tp-1fdfdcec7b17-app1
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe inspect codex-tp-1fdfdcec7b17-app1
+[
+    {
+        "Id": "ef42e9a6fa6b719ac6aabe0222a4c4c52595d82ba9c482f87b47619a602435f2",
+        "Created": "2026-11-06T00:56:55.527570359Z",
+        "Path": "/app/docker-entrypoint.sh",
+        "Args": [],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 2357,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-11-06T00:56:55.603731881Z",
+            "FinishedAt": "0001-01-01T00:00:00Z",
+            "Health": {
+                "Status": "healthy",
+                "FailingStreak": 0,
+                "Log": [
+                    {
+                        "Start": "2026-11-06T00:57:00.752978521Z",
+                        "End": "2026-11-06T00:57:01.490557492Z",
+                        "ExitCode": 0,
+                        "Output": ""
+                    }
+                ]
+            }
+        },
+        "Image": "sha256:e085318c96a8d31872882fd32f32c384603925fbc02e1b05a87fe29b7e712d7b",
+        "ResolvConfPath": "/var/lib/docker/containers/ef42e9a6fa6b719ac6aabe0222a4c4c52595d82ba9c482f87b47619a602435f2/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/ef42e9a6fa6b719ac6aabe0222a4c4c52595d82ba9c482f87b47619a602435f2/hostname",
+        "HostsPath": "/var/lib/docker/containers/ef42e9a6fa6b719ac6aabe0222a4c4c52595d82ba9c482f87b47619a602435f2/hosts",
+        "LogPath": "",
+        "Name": "/codex-tp-1fdfdcec7b17-app1",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "local",
+                "Config": {}
+            },
+            "NetworkMode": "bridge",
+            "PortBindings": {
+                "8000/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": "60524"
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "unless-stopped",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [],
+        "Config": {
+            "Hostname": "ef42e9a6fa6b",
+            "Domainname": "",
+            "User": "app",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "8000/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "DATABASE_URL=postgresql+asyncpg://docker_test@host.docker.internal:60523/libreria_docker_test",
+                "ECHO_SQL=false",
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+                "PYTHON_VERSION=3.12.16",
+                "PYTHON_SHA256=b5796915dc45ff745cfb4e990a7e7c93d6f546328a102ce31448d69ebc37575c",
+                "PYTHONDONTWRITEBYTECODE=1",
+                "PYTHONUNBUFFERED=1"
+            ],
+            "Cmd": null,
+            "Healthcheck": {
+                "Test": [
+                    "CMD",
+                    "python",
+                    "/app/healthcheck.py"
+                ],
+                "Interval": 5000000000,
+                "Timeout": 3000000000,
+                "StartPeriod": 10000000000,
+                "Retries": 3
+            },
+            "Image": "codex-tp-1fdfdcec7b17",
+            "Volumes": null,
+            "WorkingDir": "/app",
+            "Entrypoint": [
+                "/app/docker-entrypoint.sh"
+            ],
+            "Labels": {}
+        },
+        "NetworkSettings": {
+            "SandboxID": "a56b6b131aba27119283dd0348cbb4f063f19cff0cf0497d600cf922a1e569a6",
+            "SandboxKey": "/var/run/docker/netns/a56b6b131aba",
+            "Ports": {
+                "8000/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": "60524"
+                    }
+                ]
+            },
+            "Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "344e2381b692c1e82cde6a75699474d4c6271c3b237b2d99bbc237a6e84292c5",
+                    "EndpointID": "45dc0b1e1450360ff2cfc2d64a4f23104c8102a42957deb09b6b571809b0e925",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.2",
+                    "MacAddress": "62:8f:54:cf:67:ec",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": null
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:d5232922e95e7cfb718474b396bbac97f4fe3b83a11d0da591588afc1789c10a",
+            "size": 2563,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    }
+]
+HTTP 200 /health/ready: {"estado": "ok", "base": "disponible"}
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe logs codex-tp-1fdfdcec7b17-app1
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 846f445b2248, esquema inicial sin genero
+INFO  [alembic.runtime.migration] Running upgrade 846f445b2248 -> 332ba12e013b, agrega genero y libro.genero_id
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:48574 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     172.17.0.1:55416 - "GET /health/ready HTTP/1.1" 200 OK
+Primer entrypoint contra base vacía aplicó automáticamente las dos migraciones TP.
+HTTP 201 /editoriales/: {"id": 1, "nombre": "Testigo-1fdfdcec7b17", "pais": "Pruebas"}
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe exec codex-tp-1fdfdcec7b17-app1 id
+uid=100(app) gid=101(app) groups=101(app)
+$ "C:\Program Files\PostgreSQL\17\bin\pg_ctl.exe" -D <TEMP>\data -m fast -w stop
+waiting for server to shut down.... done
+server stopped
+Ready con PostgreSQL detenido: HTTP 503.
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe exec codex-tp-1fdfdcec7b17-app1 python /app/healthcheck.py
+
+HEALTHCHECK ante caída DB: salida no cero.
+Estado Docker pasó a unhealthy con PostgreSQL detenido.
+$ "C:\Program Files\PostgreSQL\17\bin\pg_ctl.exe" -D <TEMP>\data -l <TEMP>\postgres.log -o "-h 0.0.0.0 -p 60523 -c max_connections=20" -w start
+waiting for server to start.... done
+server started
+HEALTHY codex-tp-1fdfdcec7b17-app1
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-app1
+codex-tp-1fdfdcec7b17-app1
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe run --name codex-tp-1fdfdcec7b17-app2 -d --env-file <TEMP>\runtime.env -p 127.0.0.1:60524:8000 --restart unless-stopped codex-tp-1fdfdcec7b17
+2ebe0b630c54103a2fc385cbc724ec01ee3ccef50d05cddc6cef02d82d316fd2
+HEALTHY codex-tp-1fdfdcec7b17-app2
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe inspect codex-tp-1fdfdcec7b17-app2
+[
+    {
+        "Id": "2ebe0b630c54103a2fc385cbc724ec01ee3ccef50d05cddc6cef02d82d316fd2",
+        "Created": "2026-11-06T00:57:24.738538716Z",
+        "Path": "/app/docker-entrypoint.sh",
+        "Args": [],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 2585,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-11-06T00:57:24.811588067Z",
+            "FinishedAt": "0001-01-01T00:00:00Z",
+            "Health": {
+                "Status": "healthy",
+                "FailingStreak": 0,
+                "Log": [
+                    {
+                        "Start": "2026-11-06T00:57:29.964469076Z",
+                        "End": "2026-11-06T00:57:30.578478955Z",
+                        "ExitCode": 0,
+                        "Output": ""
+                    }
+                ]
+            }
+        },
+        "Image": "sha256:e085318c96a8d31872882fd32f32c384603925fbc02e1b05a87fe29b7e712d7b",
+        "ResolvConfPath": "/var/lib/docker/containers/2ebe0b630c54103a2fc385cbc724ec01ee3ccef50d05cddc6cef02d82d316fd2/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/2ebe0b630c54103a2fc385cbc724ec01ee3ccef50d05cddc6cef02d82d316fd2/hostname",
+        "HostsPath": "/var/lib/docker/containers/2ebe0b630c54103a2fc385cbc724ec01ee3ccef50d05cddc6cef02d82d316fd2/hosts",
+        "LogPath": "",
+        "Name": "/codex-tp-1fdfdcec7b17-app2",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "local",
+                "Config": {}
+            },
+            "NetworkMode": "bridge",
+            "PortBindings": {
+                "8000/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": "60524"
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "unless-stopped",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [],
+        "Config": {
+            "Hostname": "2ebe0b630c54",
+            "Domainname": "",
+            "User": "app",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "8000/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "DATABASE_URL=postgresql+asyncpg://docker_test@host.docker.internal:60523/libreria_docker_test",
+                "ECHO_SQL=false",
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+                "PYTHON_VERSION=3.12.16",
+                "PYTHON_SHA256=b5796915dc45ff745cfb4e990a7e7c93d6f546328a102ce31448d69ebc37575c",
+                "PYTHONDONTWRITEBYTECODE=1",
+                "PYTHONUNBUFFERED=1"
+            ],
+            "Cmd": null,
+            "Healthcheck": {
+                "Test": [
+                    "CMD",
+                    "python",
+                    "/app/healthcheck.py"
+                ],
+                "Interval": 5000000000,
+                "Timeout": 3000000000,
+                "StartPeriod": 10000000000,
+                "Retries": 3
+            },
+            "Image": "codex-tp-1fdfdcec7b17",
+            "Volumes": null,
+            "WorkingDir": "/app",
+            "Entrypoint": [
+                "/app/docker-entrypoint.sh"
+            ],
+            "Labels": {}
+        },
+        "NetworkSettings": {
+            "SandboxID": "7a8bd10b8e4dba96bde93a4c81011cfd08d82ce67d6164002924e944ce8405c1",
+            "SandboxKey": "/var/run/docker/netns/7a8bd10b8e4d",
+            "Ports": {
+                "8000/tcp": [
+                    {
+                        "HostIp": "127.0.0.1",
+                        "HostPort": "60524"
+                    }
+                ]
+            },
+            "Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "344e2381b692c1e82cde6a75699474d4c6271c3b237b2d99bbc237a6e84292c5",
+                    "EndpointID": "3c608f91f871057e4c8ae2016aad097a7618565004bf5074350b1d43f86a3127",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.2",
+                    "MacAddress": "06:59:aa:30:5e:37",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": null
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:d5232922e95e7cfb718474b396bbac97f4fe3b83a11d0da591588afc1789c10a",
+            "size": 2563,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    }
+]
+HTTP 200 /health/ready: {"estado": "ok", "base": "disponible"}
+HTTP 200 /editoriales/1: {"id": 1, "nombre": "Testigo-1fdfdcec7b17", "pais": "Pruebas"}
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe logs codex-tp-1fdfdcec7b17-app2
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:44886 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     172.17.0.1:44726 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     172.17.0.1:44736 - "GET /editoriales/1 HTTP/1.1" 200 OK
+Recreación: testigo persiste; no Running upgrade; contratos TP sin auth del parcial.
+RESULTADO: todas las verificaciones locales Docker aprobadas. D-02/03/04/08 VPS siguen pendientes.
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-transient-0
+
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-missing
+codex-tp-1fdfdcec7b17-missing
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-dead
+codex-tp-1fdfdcec7b17-dead
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-transient-3
+
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-transient-4
+
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-transient-5
+
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-transient-6
+
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-transient-7
+
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-transient-8
+
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-app1
+
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe rm -f codex-tp-1fdfdcec7b17-app2
+codex-tp-1fdfdcec7b17-app2
+$ C:\Users\sofav\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe image rm codex-tp-1fdfdcec7b17
+Untagged: codex-tp-1fdfdcec7b17:latest
+Deleted: sha256:e085318c96a8d31872882fd32f32c384603925fbc02e1b05a87fe29b7e712d7b
+$ "C:\Program Files\PostgreSQL\17\bin\pg_ctl.exe" -D <TEMP>\data -m fast -w stop
+waiting for server to shut down.... done
+server stopped
+Limpieza final: containers/imagen propios eliminados; PostgreSQL propio detenido. Base Python compartida conservada.

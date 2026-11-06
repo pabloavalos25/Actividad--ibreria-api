@@ -306,3 +306,56 @@ estricta; no quedan cambios activos. Se conserva la evidencia inmediata de
 238 pruebas sin DB y 101 PostgreSQL, sin afirmar otra ejecucion. OpenSpec
 continua local e ignorado; pruebas, evidencia y documentacion se publican
 por separado en `origin/master`.
+
+## Ejercicio 9 — contenedor del TP original
+
+Implementación local sobre `despliegue/`, sin incorporar las ampliaciones del
+parcial. Docker estaba instalado por usuario y activo, pero fuera de PATH:
+`%LOCALAPPDATA%/Programs/DockerDesktop/resources/bin/docker.exe`.
+Cliente y servidor **29.9.2**, motor Linux x86_64. No se instaló software ni
+se activaron servicios. La detección inicial de ausencia de Docker era incompleta.
+
+- Dockerfile `python:3.12-alpine`, instalación de wheels antes del código,
+  sin compiladores ni caché de pip; usuario `app` UID **100**.
+- Contexto exclusivo `despliegue/`, copias explícitas y `.dockerignore`;
+  BuildKit confirmó exclusión de señuelos `.env`, `.venv`, `.git` y
+  `__pycache__`. Sin URL/credenciales incorporadas a configuración o historial.
+- Entry POSIX LF: URL requerida, `alembic upgrade head` y después `exec uvicorn`.
+  `.gitattributes` conserva LF tras checkout en Windows. URL ausente y base
+  inaccesible fallan sin iniciar HTTP. No se ejecuta seed en el arranque.
+- HEALTHCHECK Python con `127.0.0.1:8000/health/ready` y timeout 2 s. Se observó
+  healthy con base disponible, HTTP 503 y unhealthy al detener PostgreSQL,
+  y recuperación a healthy al reiniciar exclusivamente el cluster propio.
+- Primera app contra base vacía aplica las dos migraciones originales. La
+  recreación conserva una editorial testigo y no vuelve a ejecutar revisiones.
+  Ciclo head/check/base vacío/head/check sin drift. No se modificó el dominio,
+  requirements, seed ni migraciones del TP; procedencia comparada contra
+  `54c7fa2e362904999e07857636bb97f087877341`, normalizando sólo CRLF/LF.
+
+Baseline antes de editar: **238 passed in 7.95s**. RED de Dockerfile: dos
+archivos ausentes; GREEN 2/2. Entry/salud: RED 10 por archivos ausentes,
+GREEN 10/10. Protección LF: RED 2 por atributo ausente, GREEN 2/2.
+Triangulación: dos URLs, dos fallos de migración, URL ausente/vacía,
+HTTP 200/503, timeout/conexión, señuelos reales y estado sano/caído/recuperado.
+Focalizadas finales: **16 passed in 5.18s**. Suite completa sin DB:
+**254 passed in 12.70s**. La suite PostgreSQL del parcial de 101 casos corresponde
+al ejercicio 8; no se repitió porque no cambió su producción ni esquema.
+El esquema del TP sí se comprobó en una base externa temporal nueva.
+
+La base de imagen inspeccionada ocupa **74 102 118 bytes** y la final
+**249 753 877 bytes**: el límite de 100 MB se aplica a la base. Ver comandos,
+versiones, salidas reales y limpieza en
+[docker_local.txt](../despliegue/evidencia/docker_local.txt), instrucciones en
+[DEPLOY.md](../despliegue/DEPLOY.md) y evidencia TDD detallada local en
+`openspec/changes/ejercicio-9-docker-tp/verification.md`.
+
+El verificador final terminó con código **0**: cluster propio
+`tmp/docker-tests-1fdfdcec7b17`, PostgreSQL **60523**, app **60524**.
+Los contenedores y la imagen propios fueron eliminados; los tres clusters de
+los intentos quedaron detenidos y sin `postmaster.pid`. La base Python
+descargada y los recursos ajenos se conservaron. Validación estricta del
+change aprobada, siete specs vigentes válidas y `git diff --check` limpio.
+
+Sin archive, commit ni push en esta acción. El ejercicio 10 requiere datos y
+ejecución real en VPS; los casos locales no certifican D-02/D-03/D-04/D-08 allí.
+Seed ampliado, materiales globales y empaquetado final siguen pendientes.
