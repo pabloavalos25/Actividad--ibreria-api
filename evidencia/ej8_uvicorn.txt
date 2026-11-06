@@ -1,0 +1,32 @@
+Evidencia real ejercicio 8: uvicorn normal y comprobante
+Fecha local: 2026-11-05
+Cluster propio: tmp/postgres-tests-27ea660d4210; PostgreSQL 127.0.0.1:49676
+Prueba: postgres_tests/test_uvicorn_receipt.py (cantidades 1 y 2)
+Comando del servidor: python -m uvicorn app.main:app --host 127.0.0.1 --port <puerto-libre>
+Sin --log-config ni cambios especiales de logging. Cwd temporal, variables PostgreSQL/JWT de prueba heredadas por el proceso; no se lee el .env real.
+La prueba crea un ADMIN de prueba, inicia sesion y crea libro y venta via HTTP real.
+Resultado focalizado: 2 passed in 12.33s; proceso uvicorn terminado en finally y cluster detenido, sin postmaster.pid.
+Los logs siguientes son copias integras, sin tokens, cookies ni credenciales.
+
+=== cantidad 1 ===
+INFO:     Started server process [13824]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:49712 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49718 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49718 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49718 - "POST /libros/ HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49718 - "POST /ventas/ HTTP/1.1" 201 Created
+2026-11-05 21:28:29,407 libreria.ventas INFO Comprobante de venta #1 enviado a destino-comprobante@example.com (total 12.50)
+
+
+=== cantidad 2 ===
+INFO:     Started server process [1952]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:49730 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49732 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49732 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49732 - "POST /libros/ HTTP/1.1" 201 Created
+INFO:     127.0.0.1:49732 - "POST /ventas/ HTTP/1.1" 201 Created
+2026-11-05 21:28:33,870 libreria.ventas INFO Comprobante de venta #1 enviado a destino-comprobante@example.com (total 25.00)

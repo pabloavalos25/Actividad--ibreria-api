@@ -149,10 +149,14 @@ Las entradas rechazan campos extra. `PATCH /libros/{id}` admite solamente títul
 
 La migración de servicios a repositorios/UoW corresponde al ejercicio 6. El contrato de stock inicial no significa que ya está resuelta toda la lógica de stock/ventas. Evidencia y límites en [progreso](docs/PROGRESO_PARCIAL_CAP1A6.md).
 
-## Estado actual: ejercicio 7
+## Estado actual: ejercicio 8
 
 Los apartados anteriores describen la evolución de los primeros ejercicios. Actualmente la autenticación, los permisos y el flujo Router → Service → UoW → Repository → Model están implementados. Todos los servicios usan UoW y repositorios; las ventas descuentan stock y guardan movimientos en la misma transacción. ADMIN puede reponer existencias y consultar su historial paginado. Los contratos y endpoints se documentan en [persistencia e inventario](docs/PERSISTENCIA.md).
 
 El ejercicio 7 verifica integridad: el trigger rechaza UPDATE/DELETE directos de movimientos y los intentos de acceso se confirman en sesión/transacción independientes del rollback de petición. Incluye [SQL C-14](test/solo_agregado.sql), [transcript psql real](evidencia/c14_psql.txt) y [casos, resultados e instrucciones de repetición](evidencia/ej7_integridad.md). Las regresiones comprueban intentos fallidos y exitosos con fallo posterior, observados desde otra sesión, mientras una escritura testigo revierte. El verificador PostgreSQL también localiza y ejecuta `psql` de esa instalación; el script exige un `movimiento_id` existente y no usa IDs ni conexiones reales por defecto.
 
-Sigue el ejercicio 8: precarga sin N+1, asincronía y comprobante con `BackgroundTasks`. El seed ampliado y los materiales restantes de entrega también están pendientes; concurrencia del capítulo 7 y Redis del capítulo 8 están excluidos de este parcial.
+El ejercicio 8 verifica precarga sin N+1 y comprobantes con `BackgroundTasks`. C-15 compara ventas de dos y cuatro renglones con sesiones nuevas, incluido un libro dado de baja, y demuestra que la serialización no necesita sesión ni consultas adicionales. Consultas reales y reproducción en [evidencia de lecturas](evidencia/ej8_lecturas.md).
+
+El comprobante se agenda sólo después de confirmar la venta y se ejecuta después del último cuerpo de respuesta ASGI. Las pruebas cubren 201, rechazo 409 y fallos de escritura/commit; sólo las ventas confirmadas generan aviso. La espera de 0.5 segundos es cooperativa (`asyncio.sleep`), y el mensaje aparece con el arranque normal de uvicorn: [log real e instrucciones](evidencia/ej8_comprobante.md). La tarea recibe identificador, correo y total como escalares; no conserva sesión ni entidades ORM. `BackgroundTasks` puede perder el aviso si termina el proceso y no proporciona reintentos ni entrega durable.
+
+El seed ampliado y los materiales restantes de entrega siguen pendientes, al igual que Docker/VPS; concurrencia del capítulo 7 y Redis del capítulo 8 están excluidos de este parcial.

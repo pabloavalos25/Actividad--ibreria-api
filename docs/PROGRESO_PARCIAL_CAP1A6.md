@@ -251,3 +251,58 @@ Validación final: **236 passed in 11.91s** sin DB y **91 passed in 25.75s** Pos
 ### Archivo del ejercicio 7
 
 Por pedido expl?cito del usuario, la CLI archiv? el change con 3/3 tareas en `openspec/changes/archive/2026-11-05-ejercicio-7-integridad-evidencia/`. Sincroniz? un requisito agregado en inventario y uno modificado en autenticaci?n, conservando los escenarios anteriores. Se verific? el contenido delta/main y las seis specs principales pasaron validaci?n estricta; no quedan cambios activos. Se reutiliza la evidencia inmediata de 236 pruebas sin DB y 91 PostgreSQL, sin presentarla como una nueva ejecuci?n. Los artefactos OpenSpec contin?an locales e ignorados por Git; c?digo, pruebas y evidencia se publican por separado en `origin/master`.
+
+## Ejercicio 8 — lecturas sin N+1 y asincronía
+
+Completado en `master`, change `ejercicio-8-lecturas-asincronia`, sin UI
+(`Decision: no (no UI)`). No se modificaron producción, migraciones,
+dependencias, `.env`, `despliegue/` ni una base real: la precarga, la tarea de
+comprobante y el logger existentes pasaron las nuevas regresiones.
+
+- C-15 mide ventas de dos y cuatro renglones con libros distintos y uno dado
+  de baja: **2 SELECT** en repositorio y **4 SELECT** en HTTP con cookie real
+  (usuario, roles y dos de detalle), iguales para ambos tamaños. Cada lectura
+  empieza sin identidades precargadas y serializa después de cerrar sesión,
+  con **0 SELECT** adicionales. Se cubren también listados por cliente/usuario,
+  editorial/género, autorías/autor y cliente con/sin perfil. Contrato en
+  [PERSISTENCIA.md](PERSISTENCIA.md), consultas reales y reproducción en
+  [ej8_lecturas.md](../evidencia/ej8_lecturas.md).
+- El orden ASGI observado es `commit → schedule → body → receipt`, una vez;
+  409 y fallos de escritura/commit no agendan ni emiten aviso y no guardan venta.
+  Dos unitarias comprueban espera cooperativa de 0.5 y log único posterior.
+  Auditoría: 40/40 handlers propios asincrónicos, sin E/S bloqueante detectada.
+- Dos ventas reales con uvicorn normal conservan su log de respuesta 201 seguido
+  del comprobante con ID, destinatario y total. Procesos terminados en finally.
+  [Log e instrucciones](../evidencia/ej8_comprobante.md) y
+  [orden/auditoría](../evidencia/ej8_asincronia.md). `BackgroundTasks` puede
+  perder avisos si termina el proceso; no es una cola durable.
+
+Baseline antes de editar: **236 passed in 7.48s** sin DB y **91 passed in
+27.12s** PostgreSQL. Las pruebas nuevas comenzaron verdes sobre comportamiento
+existente: no se inventa evidencia RED retrospectiva. Focalizadas: C-15 3/3
+(3.51s y ampliación 3.31s), orden ASGI 5/5 en 3.05s, espera/log 2/2 en 1.46s y
+uvicorn 2/2 en 12.33s. Triangulación: dos/cuatro renglones, relaciones opcionales,
+dos cantidades/totales y rechazo/fallos de escritura/commit.
+
+Validación final: **238 passed in 9.62s** sin DB y **101 passed in 37.08s**
+PostgreSQL. Cluster final `tmp/postgres-tests-5c714c16c1da`, puerto **50819**,
+detenido y sin PID; todos los clusters propios de esta acción quedaron
+detenidos. Migraciones head → base → head y check sin drift; base sin tablas
+de dominio ni función de trigger. Change válido en modo estricto y seis specs
+principales válidas; `git diff --check` limpio. Evidencia TDD en
+`openspec/changes/ejercicio-8-lecturas-asincronia/verification.md`.
+
+Sin archivar, commit ni push en esta acción. Seed ampliado, batería HTTP global,
+empaquetado y Docker/VPS siguen pendientes; no se presentan como completados.
+
+### Archivo del ejercicio 8
+
+Por pedido del usuario, la CLI completo el archivo con 3/3 tareas en
+`openspec/changes/archive/2026-11-05-ejercicio-8-lecturas-asincronia/`.
+Sincronizo dos requisitos nuevos de comprobantes y uno modificado de
+persistencia transaccional, conservando los escenarios existentes. Los
+bloques delta/main coinciden y las siete specs principales pasan validacion
+estricta; no quedan cambios activos. Se conserva la evidencia inmediata de
+238 pruebas sin DB y 101 PostgreSQL, sin afirmar otra ejecucion. OpenSpec
+continua local e ignorado; pruebas, evidencia y documentacion se publican
+por separado en `origin/master`.
