@@ -149,6 +149,10 @@ Las entradas rechazan campos extra. `PATCH /libros/{id}` admite solamente títul
 
 La migración de servicios a repositorios/UoW corresponde al ejercicio 6. El contrato de stock inicial no significa que ya está resuelta toda la lógica de stock/ventas. Evidencia y límites en [progreso](docs/PROGRESO_PARCIAL_CAP1A6.md).
 
-## Estado actual: ejercicio 6
+## Estado actual: ejercicio 7
 
-Los apartados anteriores describen la evolución de los primeros ejercicios. Actualmente la autenticación, los permisos y el flujo Router → Service → UoW → Repository → Model están implementados. Todos los servicios usan UoW y repositorios; las ventas descuentan stock y guardan movimientos en la misma transacción. ADMIN puede reponer existencias y consultar su historial paginado. Los contratos, endpoints y comandos de verificación se documentan en [persistencia e inventario](docs/PERSISTENCIA.md). La concurrencia y el seed ampliado siguen en los bloques posteriores.
+Los apartados anteriores describen la evolución de los primeros ejercicios. Actualmente la autenticación, los permisos y el flujo Router → Service → UoW → Repository → Model están implementados. Todos los servicios usan UoW y repositorios; las ventas descuentan stock y guardan movimientos en la misma transacción. ADMIN puede reponer existencias y consultar su historial paginado. Los contratos y endpoints se documentan en [persistencia e inventario](docs/PERSISTENCIA.md).
+
+El ejercicio 7 verifica integridad: el trigger rechaza UPDATE/DELETE directos de movimientos y los intentos de acceso se confirman en sesión/transacción independientes del rollback de petición. Incluye [SQL C-14](test/solo_agregado.sql), [transcript psql real](evidencia/c14_psql.txt) y [casos, resultados e instrucciones de repetición](evidencia/ej7_integridad.md). Las regresiones comprueban intentos fallidos y exitosos con fallo posterior, observados desde otra sesión, mientras una escritura testigo revierte. El verificador PostgreSQL también localiza y ejecuta `psql` de esa instalación; el script exige un `movimiento_id` existente y no usa IDs ni conexiones reales por defecto.
+
+Sigue el ejercicio 8: precarga sin N+1, asincronía y comprobante con `BackgroundTasks`. El seed ampliado y los materiales restantes de entrega también están pendientes; concurrencia del capítulo 7 y Redis del capítulo 8 están excluidos de este parcial.

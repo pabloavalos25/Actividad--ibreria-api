@@ -229,4 +229,25 @@ La recuperación comenzó con código parcial y 1/5 tareas: 234 pruebas sin DB v
 
 Validación final: **236 passed in 15.96s** sin DB y **83 passed in 41.29s** PostgreSQL. Cluster propio `tmp/postgres-tests-9354a085a777`, puerto **54553**, detenido y sin `postmaster.pid`. Upgrade/check/downgrade base/upgrade/check sin diferencias ni restos en base. OpenSpec `all_done`, **5/5 tareas**, validación estricta del change aprobada; specs principales **4/4** válidas. `git diff --check` limpio. Evidencia detallada local en `openspec/changes/ejercicio-6-repositorios-uow-stock/verification.md`.
 
-Sin archivo, commit ni push. Concurrencia del ejercicio 7 y seed ampliado/casos posteriores del 8 siguen pendientes. No se tocaron `.env`, `despliegue/`, modelos ni migraciones.
+Al cierre de esta implementación, sin archivo, commit ni push. La integridad del ejercicio 7, la precarga/asincronía del ejercicio 8 y el seed ampliado/materiales de entrega seguían pendientes. Concurrencia y Redis de los capítulos 7/8 están excluidos de la consigna. No se tocaron `.env`, `despliegue/`, modelos ni migraciones.
+
+### Archivo y publicación del ejercicio 6
+
+Posteriormente, por pedido explícito del usuario, el ejercicio 6 se archivó en `openspec/changes/archive/2026-11-05-ejercicio-6-repositorios-uow-stock/`, con seis requisitos sincronizados y seis specs principales válidas. El código se publicó en `origin/master` mediante commit `f689730`. Los artefactos OpenSpec siguen locales e ignorados por Git.
+
+## Ejercicio 7 — integridad
+
+Implementación y evidencia en `master`, sin archivar ni publicar este bloque. Change `ejercicio-7-integridad-evidencia`, sin UI (`Decision: no (no UI)`). Se conservaron el trigger de la cuarta migración y `HistorialAcceso`, cuyo comportamiento existente pasó las nuevas regresiones; no fue necesario cambiar producción, esquema o dependencias.
+
+- C-14: `test/solo_agregado.sql` recibe `movimiento_id` explícito; exige ambos rechazos SQLSTATE 23514 y fila completa intacta, con savepoints y rollback final. La prueba ejecuta psql real de la instalación del servidor temporal para movimientos positivos/negativos y detecta el trigger deshabilitado con salida distinta de cero. El trigger se restaura en `finally`; sólo se toca el cluster propio validado.
+- UPDATE que modifica el motivo, UPDATE sin cambios y DELETE se comprueban también con asyncpg para cantidades +3 y -1; los INSERT válidos siguen permitidos.
+- Login incorrecto devuelve 401 y login correcto con error posterior en roles aborta la petición; ambos conservan su intento en otra sesión. La prueba compara sesiones y transacciones distintas, verifica desde una tercera sesión y exige que el evento testigo insertado en la petición haya revertido.
+- Evidencia real, comandos reproducibles y límites en [ej7_integridad.md](../evidencia/ej7_integridad.md) y [c14_psql.txt](../evidencia/c14_psql.txt). El ejercicio 7 es integridad, no concurrencia; el 8 es precarga/asincronía, además de los materiales de seed/entrega aún pendientes.
+
+Baseline previa a editar: **236 passed in 6.62s** sin DB; **83 passed in 22.83s** PostgreSQL, cluster `postgres-tests-4ac36b0dc713:63654` detenido. RED del nuevo SQL: cuatro fallos por archivo inexistente; primera implementación dos verdes/dos fallos por `psql 17` ignorando el argumento de `\quit 3`. Corrección mínima con excepción SQL y `ON_ERROR_STOP`: seis pruebas nuevas verdes (4 psql y 2 aislamiento), después **12 passed in 3.64s** con triangulación y UPDATE con/sin cambios. Las regresiones del trigger/historial existentes comenzaron verdes; no se atribuye un RED retrospectivo.
+
+Validación final: **236 passed in 11.91s** sin DB y **91 passed in 25.75s** PostgreSQL. Cluster final `tmp/postgres-tests-07f6fd0b12e6`, puerto **52166**, detenido por el runner y sin `postmaster.pid`. Las cuatro migraciones completaron upgrade head → downgrade base → upgrade head; `alembic check` no detectó diferencias antes/después y downgrade base no dejó tablas de dominio ni función de trigger. Change válido en modo estricto y seis specs principales válidas. `git diff --check` limpio; revisión independiente del SQL sin hallazgos. No hubo cambios de producción, migraciones, dependencias, `.env`, `despliegue/`, seed ni base real. Evidencia TDD detallada en `openspec/changes/archive/2026-11-05-ejercicio-7-integridad-evidencia/verification.md`. El ejercicio 8 y el seed ampliado/materiales posteriores siguen pendientes.
+
+### Archivo del ejercicio 7
+
+Por pedido expl?cito del usuario, la CLI archiv? el change con 3/3 tareas en `openspec/changes/archive/2026-11-05-ejercicio-7-integridad-evidencia/`. Sincroniz? un requisito agregado en inventario y uno modificado en autenticaci?n, conservando los escenarios anteriores. Se verific? el contenido delta/main y las seis specs principales pasaron validaci?n estricta; no quedan cambios activos. Se reutiliza la evidencia inmediata de 236 pruebas sin DB y 91 PostgreSQL, sin presentarla como una nueva ejecuci?n. Los artefactos OpenSpec contin?an locales e ignorados por Git; c?digo, pruebas y evidencia se publican por separado en `origin/master`.

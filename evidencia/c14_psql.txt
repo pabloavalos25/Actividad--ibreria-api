@@ -1,0 +1,85 @@
+C-14: ejecucion real de psql 17 en cluster temporal propio (2026-11-06 UTC).
+Puerto local: 57881. Datos ficticios. stdout y stderr concatenados por caso.
+Comando: psql -X --no-password -h 127.0.0.1 -p 57881 -U parcial_test -d parcial_ej2 -v movimiento_id=1 -f test/solo_agregado.sql
+
+=== Caso 3_True (cantidad_triggerhabilitado) ===
+Pager usage is off.
+BEGIN
+ id | libro_id | venta_id | usuario_id | cantidad |  motivo  |            cuando
+----+----------+----------+------------+----------+----------+-------------------------------
+  1 |        1 |          |          1 |        3 | Original | 2026-11-06 00:11:34.666827+00
+(1 row)
+
+SAVEPOINT
+ROLLBACK
+C14_UPDATE_SQLSTATE 23514
+SAVEPOINT
+ROLLBACK
+C14_DELETE_SQLSTATE 23514
+C14_OK: movimiento intacto
+ROLLBACK
+psql:test/solo_agregado.sql:22: ERROR:  movimiento_stock es de solo agregado: UPDATE no permitido
+CONTEXT:  PL/pgSQL function impedir_cambio_movimiento_stock() line 3 at RAISE
+psql:test/solo_agregado.sql:36: ERROR:  movimiento_stock es de solo agregado: DELETE no permitido
+CONTEXT:  PL/pgSQL function impedir_cambio_movimiento_stock() line 3 at RAISE
+
+Salida psql: 0 (rechazos y fila verificados).
+
+=== Caso -1_True (cantidad_triggerhabilitado) ===
+Pager usage is off.
+BEGIN
+ id | libro_id | venta_id | usuario_id | cantidad |  motivo  |            cuando
+----+----------+----------+------------+----------+----------+-------------------------------
+  1 |        1 |          |          1 |       -1 | Original | 2026-11-06 00:11:34.915036+00
+(1 row)
+
+SAVEPOINT
+ROLLBACK
+C14_UPDATE_SQLSTATE 23514
+SAVEPOINT
+ROLLBACK
+C14_DELETE_SQLSTATE 23514
+C14_OK: movimiento intacto
+ROLLBACK
+psql:test/solo_agregado.sql:22: ERROR:  movimiento_stock es de solo agregado: UPDATE no permitido
+CONTEXT:  PL/pgSQL function impedir_cambio_movimiento_stock() line 3 at RAISE
+psql:test/solo_agregado.sql:36: ERROR:  movimiento_stock es de solo agregado: DELETE no permitido
+CONTEXT:  PL/pgSQL function impedir_cambio_movimiento_stock() line 3 at RAISE
+
+Salida psql: 0 (rechazos y fila verificados).
+
+=== Caso 3_False (cantidad_triggerhabilitado) ===
+Pager usage is off.
+BEGIN
+ id | libro_id | venta_id | usuario_id | cantidad |  motivo  |            cuando
+----+----------+----------+------------+----------+----------+-------------------------------
+  1 |        1 |          |          1 |        3 | Original | 2026-11-06 00:11:35.151345+00
+(1 row)
+
+SAVEPOINT
+UPDATE 1
+ROLLBACK
+C14_UPDATE_SQLSTATE 00000
+C14_FALLO: UPDATE fue aceptado o rechazo inesperado
+psql:test/solo_agregado.sql:31: ERROR:  Verificacion C14 fallida
+CONTEXT:  PL/pgSQL function inline_code_block line 1 at RAISE
+
+Salida psql: 3 (control negativo: trigger deshabilitado).
+
+=== Caso -1_False (cantidad_triggerhabilitado) ===
+Pager usage is off.
+BEGIN
+ id | libro_id | venta_id | usuario_id | cantidad |  motivo  |            cuando
+----+----------+----------+------------+----------+----------+-------------------------------
+  1 |        1 |          |          1 |       -1 | Original | 2026-11-06 00:11:35.388935+00
+(1 row)
+
+SAVEPOINT
+UPDATE 1
+ROLLBACK
+C14_UPDATE_SQLSTATE 00000
+C14_FALLO: UPDATE fue aceptado o rechazo inesperado
+psql:test/solo_agregado.sql:31: ERROR:  Verificacion C14 fallida
+CONTEXT:  PL/pgSQL function inline_code_block line 1 at RAISE
+
+Salida psql: 3 (control negativo: trigger deshabilitado).

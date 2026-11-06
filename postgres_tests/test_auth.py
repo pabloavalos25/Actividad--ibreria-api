@@ -235,3 +235,58 @@ def test_rollback_inyeccion_error_atomicidad(pg_config,operation,monkeypatch):
                     assert bcrypt.checkpw(data['password'].encode(),user.password_hash.encode())
                     assert await session.scalar(select(func.count()).select_from(EventoSeguridad).where(EventoSeguridad.actor==data['email']))==0
     asyncio.run(scenario())
+
+
+@pytest.mark.parametrize('credenciales_correctas', [False, True])
+def test_intento_independiente_sobrevive_rollback_peticion(pg_config, credenciales_correctas, monkeypatch):
+    async def scenario():
+        from app.core.database import get_session
+        from app.modules.usuarios.repository import IntentoAccesoRepository, UsuarioRepository
+
+        async with api(pg_config) as (client, factory, app):
+            data = account()
+            assert (await client.post('/auth/registro', json=data)).status_code == 201
+            marker = f'testigo-{uuid4().hex}'
+            observed = {}
+
+            async def request_session():
+                async with factory() as session:
+                    observed['peticion'] = session
+                    session.add(EventoSeguridad(actor='PRUEBA', accion=marker))
+                    await session.flush()
+                    observed['tx_peticion'] = await session.scalar(text('SELECT txid_current()'))
+                    yield session
+
+            original_add = IntentoAccesoRepository.add
+
+            async def capture_history(self, entity):
+                observed['historial'] = self.session
+                observed['tx_historial'] = await self.session.scalar(text('SELECT txid_current()'))
+                return await original_add(self, entity)
+
+            async def fail_after_attempt(self, usuario_id, ahora):
+                raise RuntimeError('fallo posterior al intento exitoso')
+
+            app.dependency_overrides[get_session] = request_session
+            monkeypatch.setattr(IntentoAccesoRepository, 'add', capture_history)
+            if credenciales_correctas:
+                monkeypatch.setattr(UsuarioRepository, 'roles_vigentes', fail_after_attempt)
+            login = dict(email=data['email'], password=data['password'] if credenciales_correctas else 'incorrecta')
+            if credenciales_correctas:
+                with pytest.raises(RuntimeError, match='posterior al intento exitoso'):
+                    await client.post('/auth/login', json=login)
+            else:
+                response = await client.post('/auth/login', json=login)
+                assert response.status_code == 401
+                assert response.json() == {'detail': 'Credenciales inválidas'}
+            assert observed['peticion'] is not observed['historial']
+            assert observed['tx_peticion'] != observed['tx_historial']
+            async with factory() as observer:
+                assert observer is not observed['peticion'] and observer is not observed['historial']
+                intentos = list(await observer.scalars(select(IntentoAcceso).where(IntentoAcceso.email == data['email'])))
+                assert len(intentos) == 1
+                assert intentos[0].exito is credenciales_correctas
+                assert intentos[0].ip == '127.0.0.1'
+                assert await observer.scalar(select(func.count()).select_from(EventoSeguridad).where(
+                    EventoSeguridad.accion == marker)) == 0
+    asyncio.run(scenario())
