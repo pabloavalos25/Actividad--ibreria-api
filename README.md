@@ -4,7 +4,7 @@ API asincrónica con FastAPI, SQLModel y PostgreSQL. Continúa el TP de capítul
 
 Integrantes: Pablo Avalos, Ismael Suarez y Sofia Blangetti.
 
-El parcial está en desarrollo. Están implementados los ejercicios 1 a 8: configuración, modelos/migraciones, contratos/CRUD/paginación, acceso, repositorios/UoW, inventario, integridad y lecturas/asincronía. El contenedor del TP original (ejercicio 9) está construido y verificado localmente; su operación está documentada en [DEPLOY.md](despliegue/DEPLOY.md). Siguen pendientes seed ampliado, materiales globales de entrega y VPS (ejercicio 10). Ver [progreso y evidencia TDD](docs/PROGRESO_PARCIAL_CAP1A6.md) y [requisitos completos](docs/REQUISITOS_PARCIAL_CAP1A6.md).
+El parcial está en desarrollo. Los ejercicios 1 a 9 están implementados y verificados. El punto 10 se simuló localmente con Docker y PostgreSQL efímero; la evidencia local no demuestra disponibilidad pública de un VPS. Siguen pendientes los datos de acceso al servidor, seed ampliado y materiales globales de entrega. Ver [progreso y evidencia TDD](docs/PROGRESO_PARCIAL_CAP1A6.md) y [requisitos completos](docs/REQUISITOS_PARCIAL_CAP1A6.md).
 
 ## Acceso (ejercicio 4)
 
@@ -35,7 +35,7 @@ Verificación actual: **213 pruebas sin DB y 71 PostgreSQL**, incluyendo permiso
 - La raíz contiene el parcial durante el desarrollo. Al armar el zip se colocará en `parcial/`.
 - [despliegue/](despliegue/PROCEDENCIA.md) conserva el TP original extraído del commit `54c7fa2e362904999e07857636bb97f087877341`. Su configuración y README originales se mantienen separados. Docker y VPS se agregan allí en los ejercicios 9 y 10.
 
-No incluir `.env`, `.venv`, `__pycache__`, `tmp/` ni credenciales en el zip. Los datos del VPS y su despliegue efectivo todavía están pendientes.
+No incluir `.env`, `.venv`, `__pycache__`, `tmp/` ni credenciales en el zip. El despliegue efectivo en VPS sigue pendiente; sólo se verificó en local.
 
 ## Preparación del parcial desde cero
 
@@ -159,4 +159,4 @@ El ejercicio 8 verifica precarga sin N+1 y comprobantes con `BackgroundTasks`. C
 
 El comprobante se agenda sólo después de confirmar la venta y se ejecuta después del último cuerpo de respuesta ASGI. Las pruebas cubren 201, rechazo 409 y fallos de escritura/commit; sólo las ventas confirmadas generan aviso. La espera de 0.5 segundos es cooperativa (`asyncio.sleep`), y el mensaje aparece con el arranque normal de uvicorn: [log real e instrucciones](evidencia/ej8_comprobante.md). La tarea recibe identificador, correo y total como escalares; no conserva sesión ni entidades ORM. `BackgroundTasks` puede perder el aviso si termina el proceso y no proporciona reintentos ni entrega durable.
 
-El seed ampliado y los materiales restantes de entrega siguen pendientes, al igual que Docker/VPS; concurrencia del capítulo 7 y Redis del capítulo 8 están excluidos de este parcial.
+El seed ampliado y los materiales restantes de entrega siguen pendientes. Docker del TP y simulación local del punto 10 están verificados; el VPS efectivo queda pendiente. Concurrencia del capítulo 7 y Redis del capítulo 8 están excluidos de este parcial.

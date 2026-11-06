@@ -16,6 +16,8 @@ import urllib.error
 import urllib.request
 import uuid
 
+from local_deployment import sale_from_seed
+
 import asyncpg
 
 
@@ -35,6 +37,7 @@ def main():
     default_docker = shutil.which("docker") or str(Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/DockerDesktop/resources/bin/docker.exe")
     parser.add_argument("--docker", default=default_docker)
     parser.add_argument("--pg-bin", type=Path, default=Path("C:/Program Files/PostgreSQL/17/bin"))
+    parser.add_argument("--point10", action="store_true", help="Run the VPS cases as an isolated local simulation")
     args = parser.parse_args()
     token = uuid.uuid4().hex[:12]
     directory = (ROOT / "tmp" / f"docker-tests-{token}").resolve()
@@ -120,19 +123,25 @@ def main():
             time.sleep(1)
         raise AssertionError(f"No healthy: {name}")
 
-    def http(path, body=None):
+    def http(path, body=None, *, expected_status=None):
         payload = None if body is None else json.dumps(body).encode()
         request = urllib.request.Request(f"http://127.0.0.1:{app_port}{path}", data=payload, headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(request, timeout=5) as response:
-            result = json.load(response)
-            record(f"HTTP {response.status} {path}: {json.dumps(result, ensure_ascii=True)}")
-            return result
+        try:
+            with urllib.request.urlopen(request, timeout=5) as response:
+                result = json.load(response)
+            if expected_status is not None:
+                assert response.status == expected_status
+                record(f"HTTP {response.status} {path}: {json.dumps(result, ensure_ascii=True)}")
+                return result
+        except urllib.error.HTTPError as error:
+            record(f"HTTP {error.code} {path}: {error.read().decode('utf-8', errors='replace')}")
+            raise
 
     def alembic(*parts):
         return docker("run", "--rm", "--env-file", env_file, "--entrypoint", "alembic", image, *parts)
 
     try:
-        record("Ejercicio 9: evidencia LOCAL real; no acredita VPS ni seed. Credenciales temporales sin secretos reales.")
+        record(("Punto 10: SIMULACIÓN LOCAL de VPS con recursos efímeros; no acredita acceso público." if args.point10 else "Ejercicio 9: evidencia LOCAL real; no acredita VPS ni seed.") + " Credenciales temporales sin secretos reales.")
         docker("version", "--format", "{{.Client.Version}} / {{.Server.Version}}")
         docker("build", "--progress=plain", "-t", image, ROOT / "despliegue", timeout=600)
         base = json.loads(docker("image", "inspect", "python:3.12-alpine").stdout)[0]
@@ -180,6 +189,8 @@ def main():
         asyncio.run(query(f"CREATE DATABASE {database}", db="postgres"))
         alembic("upgrade", "head")
         alembic("check")
+        if args.point10:
+            record("D-02 LOCAL: migraciones base vacía/head validadas contra PostgreSQL temporal externo.")
         alembic("downgrade", "base")
         assert not asyncio.run(query("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename!='alembic_version'"))
         alembic("upgrade", "head")
@@ -199,7 +210,27 @@ def main():
         assert "Running upgrade" in first_logs
         assert "846f445b2248" in first_logs and "332ba12e013b" in first_logs
         record("Primer entrypoint contra base vacía aplicó automáticamente las dos migraciones TP.")
+        if args.point10:
+            docker("run", "--rm", "--env-file", env_file, "--entrypoint", "python", image, "seed.py")
+            record("Seed LOCAL: ejecutado únicamente contra base PostgreSQL temporal nueva y vacía.")
         editorial = http("/editoriales/", {"nombre": f"Testigo-{token}", "pais": "Pruebas"})
+        local_sale = None
+        if args.point10:
+            local_sale = sale_from_seed(http("/ventas/", {
+                "cliente_id": 2,
+                "renglones": [{"libro_id": 1, "cantidad": 2}],
+            }, expected_status=201))
+            record(f"D-03 LOCAL: venta #{local_sale['id']} Rayuela x2 total {local_sale['total']}.")
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                logs = docker("logs", first).stdout
+                if f"Comprobante de venta #{local_sale['id']}" in logs:
+                    record(f"D-08 LOCAL: comprobante de venta #{local_sale['id']} observado después de HTTP 201.")
+                    break
+                time.sleep(0.1)
+            else:
+                raise AssertionError("No apareció el comprobante en los logs del contenedor")
+            record("D-04 LOCAL: guardando ID de venta y libro para comprobar persistencia tras recrear.")
         docker("exec", first, "id")
         pg("stop")
         try:
@@ -226,10 +257,15 @@ def main():
         second = f"codex-tp-{token}-app2"
         start_app(second)
         assert http(f"/editoriales/{editorial['id']}")["nombre"] == editorial["nombre"]
+        if args.point10:
+            persisted = http(f"/ventas/{local_sale['id']}")
+            sale_from_seed(persisted)
+            assert persisted["total"] == "50000.00"
+            record(f"D-04 LOCAL: venta #{local_sale['id']} sigue disponible tras recreación; migraciones no se repitieron.")
         logs = docker("logs", second).stdout
         assert "Running upgrade" not in logs
         record("Recreación: testigo persiste; no Running upgrade; contratos TP sin auth del parcial.")
-        record("RESULTADO: todas las verificaciones locales Docker aprobadas. D-02/03/04/08 VPS siguen pendientes.")
+        record("RESULTADO: D-02/03/04/08 aprobados como SIMULACIÓN LOCAL. La publicación VPS real sigue pendiente." if args.point10 else "RESULTADO: todas las verificaciones locales Docker aprobadas. D-02/03/04/08 VPS siguen pendientes.")
     finally:
         for name in containers:
             docker("rm", "-f", name, expected=None)
@@ -238,7 +274,7 @@ def main():
             pg("stop")
         assert not (data / "postmaster.pid").exists(), "Cluster propio todavía activo"
         record("Limpieza final: containers/imagen propios eliminados; PostgreSQL propio detenido. Base Python compartida conservada.")
-        output = ROOT / "despliegue/evidencia/docker_local.txt"
+        output = ROOT / ("despliegue/evidencia/vps_local_simulation.txt" if args.point10 else "despliegue/evidencia/docker_local.txt")
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text("\n".join(evidence) + "\n", encoding="utf-8")
         (directory / "verification.txt").write_text("\n".join(evidence), encoding="utf-8")

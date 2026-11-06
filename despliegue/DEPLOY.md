@@ -66,9 +66,13 @@ Usar el mismo destino PostgreSQL conserva los datos. Alembic reconoce las dos re
 
 No se modificó su código funcional ni sus migraciones para contenerizarlo. Sólo se añadieron archivos Docker, arranque y salud; se reemplazó el ejemplo de entorno con marcadores sin credenciales de ejemplo y se actualizó esta documentación.
 
-## Ejercicio 10 pendiente
+## Ejercicio 10: simulación local y VPS pendiente
 
-URL pública: pendiente. Fecha/hora de despliegue: pendiente. Host, puerto asignado y credenciales: deben ser provistos fuera del repositorio. No se realizó despliegue ni seed en VPS. Los casos D-02/D-03/D-04/D-08 deben ejecutarse allí; la evidencia local no certifica accesibilidad desde Internet ni permanencia hasta las notas.
+El punto 10 se simuló localmente con Docker y PostgreSQL temporal. Los comandos y resultados están en [evidencia local](evidencia/ejercicio10_simulacion_local.md) y [transcript](evidencia/vps_local_simulation.txt). Esta evidencia no confirma una URL pública ni acceso externo.
+
+La ejecución real en VPS continúa pendiente: URL pública, fecha/hora, host/puerto/base de PostgreSQL, puerto público y acceso deben ser provistos por la cátedra.
+
+No se realizó despliegue ni seed en VPS. Los casos D-02/D-03/D-04/D-08 deben ejecutarse allí para acreditar accesibilidad desde Internet y permanencia hasta las notas.
 
 Antes de ejecutar seed sobre el servidor se debe confirmar expresamente su destino y la autorización para reemplazar los datos. Las contraseñas reales nunca se guardan en DEPLOY.md ni en logs versionados.
 

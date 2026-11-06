@@ -356,6 +356,15 @@ los intentos quedaron detenidos y sin `postmaster.pid`. La base Python
 descargada y los recursos ajenos se conservaron. Validación estricta del
 change aprobada, siete specs vigentes válidas y `git diff --check` limpio.
 
-Sin archive, commit ni push en esta acción. El ejercicio 10 requiere datos y
-ejecución real en VPS; los casos locales no certifican D-02/D-03/D-04/D-08 allí.
-Seed ampliado, materiales globales y empaquetado final siguen pendientes.
+## Ejercicio 10 — simulación local de despliegue (6 de noviembre de 2026)
+
+Por decisión del usuario, D-02/D-03/D-04/D-08 se simularon localmente con Docker Desktop 29.9.2 y un PostgreSQL temporal externo al contenedor. El runner crea datos efímeros nuevos, escribe un env temporal fuera del contexto, publica HTTP sólo en `127.0.0.1` y elimina únicamente los recursos que creó. El seed se ejecutó exclusivamente sobre esa base temporal vacía.
+
+- D-02 local: primer inicio aplicó las dos migraciones; `/health/ready` dio 200. Caída de PostgreSQL: 503 y estado `unhealthy`; recuperación: `healthy`.
+- D-03 local: catálogo 200 y venta 201, cliente Tomás, dos Rayuelas, total `50000.00`.
+- D-04 local: la venta siguió accesible tras eliminar y recrear el contenedor; no se repitieron migraciones.
+- D-08 local: el log de comprobante de venta #3 apareció después de la respuesta 201.
+- `python -m pytest -q`: **257 passed**. Runner Docker punto 10 completado con exit 0 y runner del punto 9 repetido con exit 0. Migraciones head/check/base/head/check sin drift.
+- Limpieza confirmada: contenedores e imagen propios eliminados y PostgreSQL temporal detenido.
+
+La guía resumida y la salida real están en `despliegue/evidencia/ejercicio10_simulacion_local.md` y `despliegue/evidencia/vps_local_simulation.txt`. Esto no acredita acceso público ni permanencia de un VPS. Siguen pendientes los casos reales D-02/D-03/D-04/D-08 en VPS, el seed ampliado, materiales globales y empaquetado final.
