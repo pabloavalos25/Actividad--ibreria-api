@@ -16,7 +16,10 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import posixpath
+import re
 from typing import Any
+from urllib.parse import quote, unquote, urlsplit
 import zipfile
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -142,6 +145,43 @@ def _iter_tree_files(base_dir: Path) -> list[Path]:
     return files
 
 
+# Enlaces e imágenes inline, con destino simple o entre <>, y título opcional.
+MARKDOWN_LINK = re.compile(
+    r"!?\[(?:\\.|[^\]\\])*\]\(\s*"
+    r"(?P<target><[^>\n]*>|(?:\\.|[^\s()\\]|\((?:\\.|[^()\\])*\))+)"
+    r"(?:\s+(?:\"[^\"]*\"|'[^']*'|\([^)]*\)))?\s*\)"
+)
+
+
+def _relative_link_path(target: str) -> str | None:
+    """Separa el ancla e ignora URLs, rutas absolutas y enlaces internos."""
+    path = target.removeprefix("<").removesuffix(">")
+    if not path or path.startswith(("#", "/")) or urlsplit(path).scheme:
+        return None
+    return path.split("#", 1)[0]
+
+
+def _rewrite_despliegue_links(text: str, source: Path, repo_root: Path, arcname: str) -> str:
+    """Adapta sólo los enlaces de parcial/ que apuntan al despliegue del repo."""
+    def rewrite(match: re.Match[str]) -> str:
+        target = match["target"]
+        path = _relative_link_path(target)
+        if path is None:
+            return match[0]
+        resolved = (source.parent / unquote(path)).resolve()
+        try:
+            relative = resolved.relative_to((repo_root / "despliegue").resolve())
+        except ValueError:
+            return match[0]
+        destination = (Path("despliegue") / relative).as_posix()
+        new_path = quote(posixpath.relpath(destination, posixpath.dirname(arcname)))
+        new_target = target.replace(path, new_path, 1)
+        start, end = match.span("target")
+        return match[0][:start - match.start()] + new_target + match[0][end - match.start():]
+
+    return MARKDOWN_LINK.sub(rewrite, text)
+
+
 def build_entrega_zip(
     output_path: Path | None = None,
     group_name: str = DEFAULT_GROUP_NAME,
@@ -179,7 +219,13 @@ def build_entrega_zip(
 
     with zipfile.ZipFile(output_path, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
         for src_file, arcname in sorted(entries_to_write, key=lambda item: item[1]):
-            zf.write(src_file, arcname=arcname)
+            if arcname.startswith("parcial/") and src_file.suffix == ".md":
+                text = src_file.read_text(encoding="utf-8")
+                zf.writestr(
+                    arcname, _rewrite_despliegue_links(text, src_file, repo_root, arcname)
+                )
+            else:
+                zf.write(src_file, arcname=arcname)
 
     verify_entrega_zip(output_path)
     return output_path
@@ -193,6 +239,7 @@ def verify_entrega_zip(zip_path: Path) -> dict[str, Any]:
 
     with zipfile.ZipFile(zip_path, mode="r") as zf:
         names = [info.filename for info in zf.infolist() if not info.is_dir()]
+        all_names = set(zf.namelist())
 
     if not names:
         raise ValueError("El archivo ZIP está vacío.")
@@ -217,6 +264,25 @@ def verify_entrega_zip(zip_path: Path) -> dict[str, Any]:
         raise ValueError(
             f"Faltan archivos obligatorios dentro del ZIP: {', '.join(missing)}"
         )
+
+    with zipfile.ZipFile(zip_path, mode="r") as zf:
+        for entry in names:
+            if not entry.endswith(".md"):
+                continue
+            text = zf.read(entry).decode("utf-8")
+            for match in MARKDOWN_LINK.finditer(text):
+                target = match["target"]
+                path = _relative_link_path(target)
+                if path is None:
+                    continue
+                resolved = posixpath.normpath(
+                    posixpath.join(posixpath.dirname(entry), unquote(path))
+                )
+                directory = resolved.rstrip("/") + "/"
+                if resolved not in all_names and not any(
+                    name.startswith(directory) for name in all_names
+                ):
+                    raise ValueError(f"Enlace relativo roto en {entry}: {target}")
 
     parcial_count = sum(1 for n in names if n.startswith("parcial/"))
     despliegue_count = sum(1 for n in names if n.startswith("despliegue/"))
