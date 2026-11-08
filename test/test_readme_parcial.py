@@ -67,6 +67,15 @@ def test_readme_casos_c01_a_c16_y_sin_afirmaciones_obsoletas():
         assert frase_obsoleta not in contenido, f"Frase obsoleta en README.md: {frase_obsoleta}"
 
 
+def test_readme_repositorio_visible_al_inicio():
+    contenido = RUTA_README.read_text(encoding="utf-8")
+    inicio = "\n".join(contenido.splitlines()[:15])
+
+    assert "https://github.com/pabloavalos25/Actividad--ibreria-api" in inicio, (
+        "Falta URL del repositorio en las primeras 15 líneas de README.md"
+    )
+
+
 def test_readme_despliegue_en_linea_y_evidencia():
     contenido = RUTA_README.read_text(encoding="utf-8")
 
