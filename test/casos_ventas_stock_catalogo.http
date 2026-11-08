@@ -1,0 +1,376 @@
+# Casos C-10 a C-16: ventas atómicas, sólo agregado, baja lógica, N+1 y búsqueda/paginación.
+#
+# Antes de correr esta colección de punta a punta, dejar la base en el estado inicial:
+#   python seed.py
+#
+# Compatible con VS Code REST Client y JetBrains HTTP Client.
+# Cada sesión usa # @name y # @no-cookie-jar para enviar explícitamente su propia cookie.
+
+@base = http://127.0.0.1:8000
+@password = secreto123
+
+### Login sesión VENDEDOR (Carlos Venta, id=3)
+# Resultado esperado: 200 OK con Set-Cookie: access_token=...; HttpOnly; SameSite=Lax
+# @name login_vendedor
+# @no-cookie-jar
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "vendedor@example.com",
+  "password": "{{password}}"
+}
+
+### Login sesión ADMIN (Ada Lovelace, id=1)
+# Resultado esperado: 200 OK con Set-Cookie: access_token=...; HttpOnly; SameSite=Lax
+# @name login_admin
+# @no-cookie-jar
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "{{password}}"
+}
+
+### C-10a · Registrar venta válida con dos renglones (libro 2 y libro 4) para Tomás Ríos (cliente 2)
+# No se envían precio_unitario, subtotal, total ni fecha: los calcula el servidor con Decimal.
+# Se venden 1 ejemplar de Antología (libro 2, 30000.00, stock 5 -> 4) y
+# 1 ejemplar de Respiración artificial (libro 4, 27000.00, stock 3 -> 2).
+# Resultado esperado: 201 Created
+#   {
+#     "id": 2,
+#     "fecha": "<UTC>",
+#     "total": "57000.00",
+#     "cliente": { "id": 2, "nombre": "Tomás Ríos", "email": "tomas@example.com" },
+#     "renglones": [
+#       { "libro_id": 2, "titulo": "Antología de la literatura fantástica",
+#         "cantidad": 1, "precio_unitario": "30000.00", "subtotal": "30000.00" },
+#       { "libro_id": 4, "titulo": "Respiración artificial",
+#         "cantidad": 1, "precio_unitario": "27000.00", "subtotal": "27000.00" }
+#     ]
+#   }
+# Y 0,5 s después de devolver la respuesta, el log del servidor muestra:
+#   Comprobante de venta #2 enviado a tomas@example.com (total 57000.00)
+# @no-cookie-jar
+POST {{base}}/ventas/
+Cookie: {{login_vendedor.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "cliente_id": 2,
+  "renglones": [
+    { "libro_id": 2, "cantidad": 1 },
+    { "libro_id": 4, "cantidad": 1 }
+  ]
+}
+
+### C-10b · Comprobar descuento de stock en libro 2 (de 5 a 4)
+# Resultado esperado: 200 OK con "stock": 4
+# @no-cookie-jar
+GET {{base}}/libros/2
+
+### C-10c · Comprobar descuento de stock en libro 4 (de 3 a 2)
+# Resultado esperado: 200 OK con "stock": 2
+# @no-cookie-jar
+GET {{base}}/libros/4
+
+### C-10d · Comprobar movimiento negativo de stock en libro 2 asociado a venta_id=2 y usuario_id=3
+# Resultado esperado: 200 OK con el movimiento {"cantidad": -1, "venta_id": 2, "usuario_id": 3, "motivo": "Venta #2"}
+# además del ingreso inicial (+5). Suma de cantidades = 4 == libro.stock.
+# @no-cookie-jar
+GET {{base}}/libros/2/movimientos
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+
+### C-10e · Comprobar movimiento negativo de stock en libro 4 asociado a venta_id=2 y usuario_id=3
+# Resultado esperado: 200 OK con el movimiento {"cantidad": -1, "venta_id": 2, "usuario_id": 3, "motivo": "Venta #2"}
+# además del ingreso inicial (+3). Suma de cantidades = 2 == libro.stock.
+# @no-cookie-jar
+GET {{base}}/libros/4/movimientos
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+
+### C-11a · Intentar venta con Rayuela (libro 1, 1 ejemplar, stock=10 alcanza) y Bestiario (libro 5, 2 ejemplares, stock=1 no alcanza)
+# El fallo en el segundo renglón revierte toda la transacción del UnitOfWork.
+# Resultado esperado: 409 Conflict
+#   { "detail": "Libro no disponible o stock insuficiente" }
+# @no-cookie-jar
+POST {{base}}/ventas/
+Cookie: {{login_vendedor.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "cliente_id": 2,
+  "renglones": [
+    { "libro_id": 1, "cantidad": 1 },
+    { "libro_id": 5, "cantidad": 2 }
+  ]
+}
+
+### C-11b · Comprobar que Rayuela (libro 1) sigue con stock 10
+# Resultado esperado: 200 OK con "stock": 10 (no quedó ningún descuento parcial)
+# @no-cookie-jar
+GET {{base}}/libros/1
+
+### C-11c · Comprobar que Bestiario (libro 5) sigue con stock 1
+# Resultado esperado: 200 OK con "stock": 1
+# @no-cookie-jar
+GET {{base}}/libros/5
+
+### C-11d · Comprobar que no se agregaron movimientos en Rayuela (libro 1)
+# Resultado esperado: 200 OK con un único movimiento (Ingreso inicial +10); suma = 10 == stock.
+# @no-cookie-jar
+GET {{base}}/libros/1/movimientos
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+
+### C-11e · Comprobar que no se agregaron movimientos en Bestiario (libro 5)
+# Resultado esperado: 200 OK con un único movimiento (Ingreso inicial +1); suma = 1 == stock.
+# @no-cookie-jar
+GET {{base}}/libros/5/movimientos
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+
+### C-12a · Venta con cliente inexistente (cliente_id=999)
+# Resultado esperado: 409 Conflict sin dejar escrituras a medias
+#   { "detail": "Cliente inexistente" }
+# @no-cookie-jar
+POST {{base}}/ventas/
+Cookie: {{login_vendedor.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "cliente_id": 999,
+  "renglones": [
+    { "libro_id": 1, "cantidad": 1 }
+  ]
+}
+
+### C-12b · Venta con libro inexistente (libro_id=999)
+# Resultado esperado: 409 Conflict sin dejar escrituras a medias
+#   { "detail": "Libro no disponible o stock insuficiente" }
+# @no-cookie-jar
+POST {{base}}/ventas/
+Cookie: {{login_vendedor.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "cliente_id": 2,
+  "renglones": [
+    { "libro_id": 999, "cantidad": 1 }
+  ]
+}
+
+### C-12c.1 · Preparación: dar de baja lógica el libro 4 (Respiración artificial)
+# Resultado esperado: 204 No Content (marca eliminado_en en UTC sin borrar la fila)
+# @no-cookie-jar
+DELETE {{base}}/libros/4
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+
+### C-12c.2 · Venta con libro dado de baja (libro_id=4)
+# Resultado esperado: 409 Conflict sin dejar escrituras a medias
+#   { "detail": "Libro no disponible o stock insuficiente" }
+# @no-cookie-jar
+POST {{base}}/ventas/
+Cookie: {{login_vendedor.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "cliente_id": 2,
+  "renglones": [
+    { "libro_id": 4, "cantidad": 1 }
+  ]
+}
+
+### C-13a · Reponer 3 ejemplares de Bestiario (libro 5, stock pasa de 1 a 4)
+# Resultado esperado: 200 OK con "stock": 4
+# @no-cookie-jar
+POST {{base}}/libros/5/reponer
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "cantidad": 3,
+  "motivo": "Reposición editorial"
+}
+
+### C-13b · Comprobar movimiento positivo (+3) en Bestiario (libro 5)
+# Resultado esperado: 200 OK con movimientos (+3 "Reposición editorial" y +1 "Ingreso inicial"); suma = 4 == stock.
+# @no-cookie-jar
+GET {{base}}/libros/5/movimientos
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+
+### C-13c · Dar de baja lógica el libro 3 (Ficciones, que figura en la Venta 1 inicial)
+# Resultado esperado: 204 No Content
+# @no-cookie-jar
+DELETE {{base}}/libros/3
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+
+### C-13d · Comprobar que Ficciones (libro 3) desaparece del listado público GET /libros/
+# Resultado esperado: 200 OK con {"items": [], "total": 0, "page": 1, "size": 20, "pages": 1}
+# @no-cookie-jar
+GET {{base}}/libros/?titulo=Ficciones
+
+### C-13e · Comprobar que el libro 3 dado de baja no se puede vender
+# Resultado esperado: 409 Conflict
+#   { "detail": "Libro no disponible o stock insuficiente" }
+# @no-cookie-jar
+POST {{base}}/ventas/
+Cookie: {{login_vendedor.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "cliente_id": 2,
+  "renglones": [
+    { "libro_id": 3, "cantidad": 1 }
+  ]
+}
+
+### C-13f · Comprobar que el libro 3 dado de baja no se puede reponer
+# Resultado esperado: 409 Conflict
+#   { "detail": "El libro está dado de baja" }
+# @no-cookie-jar
+POST {{base}}/libros/3/reponer
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "cantidad": 2,
+  "motivo": "Intento sobre libro dado de baja"
+}
+
+### C-13g · Dar de alta un nuevo libro vigente reutilizando el ISBN 978-950-00-0003-3 del libro dado de baja
+# El índice único parcial uq_libro_isbn_vigente (WHERE eliminado_en IS NULL) lo permite.
+# Resultado esperado: 201 Created con "id": 6, "isbn": "978-950-00-0003-3", "stock": 5
+# @no-cookie-jar
+POST {{base}}/libros/
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "isbn": "978-950-00-0003-3",
+  "titulo": "Ficciones (Reedición)",
+  "precio": "24000.00",
+  "stock_inicial": 5,
+  "editorial_id": 2,
+  "genero_id": 1,
+  "autores": [
+    { "autor_id": 2, "rol": "autor", "orden": 1 }
+  ]
+}
+
+### C-13h · Intentar dar de alta un segundo libro vigente con el mismo ISBN 978-950-00-0003-3
+# Resultado esperado: 409 Conflict
+#   { "detail": "No se pudo crear el libro: editorial, genero, autor o isbn invalidos" }
+# @no-cookie-jar
+POST {{base}}/libros/
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "isbn": "978-950-00-0003-3",
+  "titulo": "Ficciones (Duplicado vigente)",
+  "precio": "25000.00",
+  "stock_inicial": 2,
+  "editorial_id": 2,
+  "genero_id": 1,
+  "autores": [
+    { "autor_id": 2, "rol": "autor", "orden": 1 }
+  ]
+}
+
+### C-13i · Comprobar que la Venta 1 histórica sigue mostrando el renglón con el título del libro 3 dado de baja
+# Resultado esperado: 200 OK con el renglón {"libro_id": 3, "titulo": "Ficciones", "cantidad": 2, ...}
+# @no-cookie-jar
+GET {{base}}/ventas/1
+Cookie: {{login_vendedor.response.headers.Set-Cookie}}
+
+### C-14 · Consultar movimiento existente y referencia a prueba SQL en psql (test/solo_agregado.sql)
+# La prohibición de UPDATE y DELETE sobre movimiento_stock está garantizada en PostgreSQL
+# por el disparador trg_movimiento_stock_inmutable (SQLSTATE 23514).
+# Para verificarlo directamente en psql sobre el movimiento id=1:
+#   psql -X --no-password -h 127.0.0.1 -p 5432 -U postgres -d libreria \
+#     -v movimiento_id=1 -f test/solo_agregado.sql
+# La salida completa con las sentencias UPDATE/DELETE rechazadas y la fila intacta
+# se encuentra documentada en: evidencia/ej7_integridad.md
+# Resultado esperado de esta consulta HTTP: 200 OK con los movimientos del libro 1.
+# @no-cookie-jar
+GET {{base}}/libros/1/movimientos
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+
+### C-15a · Detalle de la Venta 1 (2 renglones) con SQL_ECHO=true
+# Con SQL_ECHO=true en .env, la lectura de detalle ejecuta una cantidad fija de consultas SELECT
+# (precarga con joinedload(Venta.cliente) y selectinload(Venta.renglones).joinedload(RenglonVenta.libro)).
+# Ver captura comparativa en: evidencia/ej8_lecturas.md
+# Resultado esperado: 200 OK con 2 renglones
+# @no-cookie-jar
+GET {{base}}/ventas/1
+Cookie: {{login_vendedor.response.headers.Set-Cookie}}
+
+### C-15b · Crear Venta 3 con 4 renglones (libros vigentes 1, 2, 5 y 6)
+# Resultado esperado: 201 Created con "id": 3 y 4 renglones
+# @no-cookie-jar
+POST {{base}}/ventas/
+Cookie: {{login_vendedor.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "cliente_id": 1,
+  "renglones": [
+    { "libro_id": 1, "cantidad": 1 },
+    { "libro_id": 2, "cantidad": 1 },
+    { "libro_id": 5, "cantidad": 1 },
+    { "libro_id": 6, "cantidad": 1 }
+  ]
+}
+
+### C-15c · Detalle de la Venta 3 (4 renglones) con SQL_ECHO=true
+# Ejecuta exactamente la misma cantidad fija de sentencias SELECT que C-15a (sin N+1).
+# Ver captura comparativa en: evidencia/ej8_lecturas.md
+# Resultado esperado: 200 OK con 4 renglones
+# @no-cookie-jar
+GET {{base}}/ventas/3
+Cookie: {{login_vendedor.response.headers.Set-Cookie}}
+
+### C-16a · Búsqueda por título con el texto ' OR '1'='1 (parámetro ligado, sin inyección SQL)
+# Resultado esperado: 200 OK
+#   { "items": [], "total": 0, "page": 1, "size": 20, "pages": 1 }
+# @no-cookie-jar
+GET {{base}}/libros/?titulo=%27%20OR%20%271%27%3D%271
+
+### C-16b · Búsqueda filtrada y paginada con titulo=ficc&size=1
+# Encuentra el único libro vigente cuyo título contiene "ficc" (Ficciones (Reedición), id=6).
+# Resultado esperado: 200 OK con "total": 1, "page": 1, "size": 1, "pages": 1
+# @no-cookie-jar
+GET {{base}}/libros/?titulo=ficc&size=1
+
+### C-16c · Pedido de página fuera de rango (titulo=ficc&size=1&page=2 con pages=1)
+# Resultado esperado: 422 Unprocessable Entity (page > pages)
+# @no-cookie-jar
+GET {{base}}/libros/?titulo=ficc&size=1&page=2
+
+### C-16d · Pedido con tamaño de página mayor al máximo permitido (size=500 > 100)
+# Resultado esperado: 422 Unprocessable Entity
+# @no-cookie-jar
+GET {{base}}/libros/?size=500
+
+### C-16e · Actualización parcial (PATCH) cambiando sólo el precio de Rayuela (libro 1)
+# model_dump(exclude_unset=True) actualiza únicamente precio y conserva titulo ("Rayuela") y demás campos.
+# Resultado esperado: 200 OK con "precio": "26500.00" y "titulo": "Rayuela"
+# @no-cookie-jar
+PATCH {{base}}/libros/1
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "precio": "26500.00"
+}
+
+### C-16f · Intentar modificar stock mediante PATCH /libros/1
+# LibroUpdate declara extra="forbid" y no incluye el campo stock (RN-11).
+# Resultado esperado: 422 Unprocessable Entity
+# @no-cookie-jar
+PATCH {{base}}/libros/1
+Cookie: {{login_admin.response.headers.Set-Cookie}}
+Content-Type: application/json
+
+{
+  "stock": 99
+}
