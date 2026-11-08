@@ -4,6 +4,8 @@ API REST asincrónica para catálogo, clientes, ventas atómicas, inventario de 
 
 **Integrantes del grupo: Pablo Avalos, Ismael Suarez y Sofia Blangetti.**
 
+**Repositorio:** [github.com/pabloavalos25/Actividad--ibreria-api](https://github.com/pabloavalos25/Actividad--ibreria-api)
+
 ## Índice
 
 - [Organización de la entrega](#organización-de-la-entrega)
