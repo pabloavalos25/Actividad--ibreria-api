@@ -107,6 +107,8 @@ REQUIRED_ZIP_ENTRIES: tuple[str, ...] = (
     "despliegue/evidencia/docker_local.txt",
     "despliegue/evidencia/ejercicio10_simulacion_local.md",
     "despliegue/evidencia/vps_local_simulation.txt",
+    "despliegue/evidencia/vps_ejercicio10.md",
+    "despliegue/evidencia/vps_transcript.txt",
 )
 
 

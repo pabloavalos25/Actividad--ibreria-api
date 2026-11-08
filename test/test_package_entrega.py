@@ -68,6 +68,8 @@ def test_build_and_verify_entrega_zip_structure_and_exclusions(tmp_path: Path) -
         "despliegue/evidencia/docker_local.txt",
         "despliegue/evidencia/ejercicio10_simulacion_local.md",
         "despliegue/evidencia/vps_local_simulation.txt",
+        "despliegue/evidencia/vps_ejercicio10.md",
+        "despliegue/evidencia/vps_transcript.txt",
     }
     missing = expected_entries - names
     assert not missing, f"Missing expected entries in ZIP: {sorted(missing)}"
@@ -93,6 +95,32 @@ def test_build_and_verify_entrega_zip_structure_and_exclusions(tmp_path: Path) -
         filename = parts[-1]
         assert filename != ".env" and not filename.startswith(".env."), f"Secret env file in {entry}"
         assert not filename.endswith((".pyc", ".pyo", ".zip")), f"Forbidden extension in {entry}"
+
+
+@pytest.mark.parametrize(
+    "missing_entry",
+    [
+        "despliegue/evidencia/vps_ejercicio10.md",
+        "despliegue/evidencia/vps_transcript.txt",
+    ],
+)
+def test_verify_entrega_zip_requires_real_vps_evidence(
+    tmp_path: Path, missing_entry: str
+) -> None:
+    """Reject archives missing either real VPS evidence file, even with local evidence."""
+    from scripts.package_entrega import REQUIRED_ZIP_ENTRIES, verify_entrega_zip
+
+    entries = set(REQUIRED_ZIP_ENTRIES) | {
+        "despliegue/evidencia/vps_ejercicio10.md",
+        "despliegue/evidencia/vps_transcript.txt",
+    }
+    incomplete_zip = tmp_path / "missing_vps_evidence.zip"
+    with zipfile.ZipFile(incomplete_zip, "w") as zf:
+        for entry in sorted(entries - {missing_entry}):
+            zf.writestr(entry, "test fixture\n")
+
+    with pytest.raises(ValueError, match=missing_entry):
+        verify_entrega_zip(incomplete_zip)
 
 
 def test_verify_entrega_zip_rejects_forbidden_or_incomplete_archive(tmp_path: Path) -> None:
