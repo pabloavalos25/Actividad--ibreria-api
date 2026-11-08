@@ -9,7 +9,7 @@
 @base = http://127.0.0.1:8000
 @password = secreto123
 
-### Login sesión VENDEDOR (Carlos Venta, id=3)
+### Login sesión VENDEDOR (Vendedor, id=3)
 # Resultado esperado: 200 OK con Set-Cookie: access_token=...; HttpOnly; SameSite=Lax
 # @name login_vendedor
 # @no-cookie-jar
@@ -21,7 +21,7 @@ Content-Type: application/json
   "password": "{{password}}"
 }
 
-### Login sesión ADMIN (Ada Lovelace, id=1)
+### Login sesión ADMIN (Administrador, id=1)
 # Resultado esperado: 200 OK con Set-Cookie: access_token=...; HttpOnly; SameSite=Lax
 # @name login_admin
 # @no-cookie-jar
@@ -76,14 +76,14 @@ GET {{base}}/libros/2
 GET {{base}}/libros/4
 
 ### C-10d · Comprobar movimiento negativo de stock en libro 2 asociado a venta_id=2 y usuario_id=3
-# Resultado esperado: 200 OK con el movimiento {"cantidad": -1, "venta_id": 2, "usuario_id": 3, "motivo": "Venta #2"}
+# Resultado esperado: 200 OK con el movimiento {"cantidad": -1, "venta_id": 2, "usuario_id": 3, "motivo": "Venta"}
 # además del ingreso inicial (+5). Suma de cantidades = 4 == libro.stock.
 # @no-cookie-jar
 GET {{base}}/libros/2/movimientos
 Cookie: {{login_admin.response.headers.Set-Cookie}}
 
 ### C-10e · Comprobar movimiento negativo de stock en libro 4 asociado a venta_id=2 y usuario_id=3
-# Resultado esperado: 200 OK con el movimiento {"cantidad": -1, "venta_id": 2, "usuario_id": 3, "motivo": "Venta #2"}
+# Resultado esperado: 200 OK con el movimiento {"cantidad": -1, "venta_id": 2, "usuario_id": 3, "motivo": "Venta"}
 # además del ingreso inicial (+3). Suma de cantidades = 2 == libro.stock.
 # @no-cookie-jar
 GET {{base}}/libros/4/movimientos
@@ -117,13 +117,13 @@ GET {{base}}/libros/1
 GET {{base}}/libros/5
 
 ### C-11d · Comprobar que no se agregaron movimientos en Rayuela (libro 1)
-# Resultado esperado: 200 OK con un único movimiento (Ingreso inicial +10); suma = 10 == stock.
+# Resultado esperado: 200 OK con los dos movimientos del seed (+11 "Stock inicial" y -1 "Venta 1"); suma = 10 == stock.
 # @no-cookie-jar
 GET {{base}}/libros/1/movimientos
 Cookie: {{login_admin.response.headers.Set-Cookie}}
 
 ### C-11e · Comprobar que no se agregaron movimientos en Bestiario (libro 5)
-# Resultado esperado: 200 OK con un único movimiento (Ingreso inicial +1); suma = 1 == stock.
+# Resultado esperado: 200 OK con un único movimiento (Stock inicial +1); suma = 1 == stock.
 # @no-cookie-jar
 GET {{base}}/libros/5/movimientos
 Cookie: {{login_admin.response.headers.Set-Cookie}}
@@ -159,7 +159,7 @@ Content-Type: application/json
 }
 
 ### C-12c.1 · Preparación: dar de baja lógica el libro 4 (Respiración artificial)
-# Resultado esperado: 204 No Content (marca eliminado_en en UTC sin borrar la fila)
+# Resultado esperado: 204 No Content (marca borrado_en en UTC sin borrar la fila)
 # @no-cookie-jar
 DELETE {{base}}/libros/4
 Cookie: {{login_admin.response.headers.Set-Cookie}}
@@ -192,7 +192,7 @@ Content-Type: application/json
 }
 
 ### C-13b · Comprobar movimiento positivo (+3) en Bestiario (libro 5)
-# Resultado esperado: 200 OK con movimientos (+3 "Reposición editorial" y +1 "Ingreso inicial"); suma = 4 == stock.
+# Resultado esperado: 200 OK con movimientos (+3 "Reposición editorial" y +1 "Stock inicial"); suma = 4 == stock.
 # @no-cookie-jar
 GET {{base}}/libros/5/movimientos
 Cookie: {{login_admin.response.headers.Set-Cookie}}
@@ -237,7 +237,7 @@ Content-Type: application/json
 }
 
 ### C-13g · Dar de alta un nuevo libro vigente reutilizando el ISBN 978-950-00-0003-3 del libro dado de baja
-# El índice único parcial uq_libro_isbn_vigente (WHERE eliminado_en IS NULL) lo permite.
+# El índice único parcial uq_libro_isbn_vigente (WHERE borrado_en IS NULL) lo permite.
 # Resultado esperado: 201 Created con "id": 6, "isbn": "978-950-00-0003-3", "stock": 5
 # @no-cookie-jar
 POST {{base}}/libros/
@@ -258,7 +258,7 @@ Content-Type: application/json
 
 ### C-13h · Intentar dar de alta un segundo libro vigente con el mismo ISBN 978-950-00-0003-3
 # Resultado esperado: 409 Conflict
-#   { "detail": "No se pudo crear el libro: editorial, genero, autor o isbn invalidos" }
+#   { "detail": "La operación entra en conflicto con los datos guardados" }
 # @no-cookie-jar
 POST {{base}}/libros/
 Cookie: {{login_admin.response.headers.Set-Cookie}}
@@ -284,7 +284,7 @@ Cookie: {{login_vendedor.response.headers.Set-Cookie}}
 
 ### C-14 · Consultar movimiento existente y referencia a prueba SQL en psql (test/solo_agregado.sql)
 # La prohibición de UPDATE y DELETE sobre movimiento_stock está garantizada en PostgreSQL
-# por el disparador trg_movimiento_stock_inmutable (SQLSTATE 23514).
+# por el disparador trg_movimiento_stock_solo_agregado (SQLSTATE 23514).
 # Para verificarlo directamente en psql sobre el movimiento id=1:
 #   psql -X --no-password -h 127.0.0.1 -p 5432 -U postgres -d libreria \
 #     -v movimiento_id=1 -f test/solo_agregado.sql

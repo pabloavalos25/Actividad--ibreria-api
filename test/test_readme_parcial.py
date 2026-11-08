@@ -65,3 +65,39 @@ def test_readme_casos_c01_a_c16_y_sin_afirmaciones_obsoletas():
         "test/evidencia_c07.md",
     ):
         assert frase_obsoleta not in contenido, f"Frase obsoleta en README.md: {frase_obsoleta}"
+
+
+def test_readme_despliegue_en_linea_y_evidencia():
+    contenido = RUTA_README.read_text(encoding="utf-8")
+
+    for referencia in (
+        "https://api.ismaelsuarez.me",
+        "https://api.ismaelsuarez.me/docs",
+        "despliegue/DEPLOY.md",
+        "despliegue/evidencia/vps_ejercicio10.md",
+    ):
+        assert referencia in contenido, f"Falta referencia a {referencia} en README.md"
+
+
+def test_readme_seccion_integrantes_con_insignias():
+    contenido = RUTA_README.read_text(encoding="utf-8")
+
+    assert any(
+        linea.startswith("## ") and "Integrantes" in linea
+        for linea in contenido.splitlines()
+    ), "Falta sección Integrantes en README.md"
+    assert "https://img.shields.io/badge/" in contenido, "Faltan insignias en README.md"
+
+
+def test_readme_sin_datos_incorrectos_del_dominio():
+    contenido = RUTA_README.read_text(encoding="utf-8")
+
+    for dato_incorrecto in (
+        "eliminado_en",
+        "Mariana Enríquez",
+        "prologuista",
+        '"status": "ok"',
+        "Ficción",
+        "Ensayo",
+    ):
+        assert dato_incorrecto not in contenido, f"Dato incorrecto en README.md: {dato_incorrecto}"

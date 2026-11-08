@@ -109,7 +109,7 @@ Content-Type: application/json
 ### C-03b · Petición a ruta autenticada sin cookie de sesión
 # @no-cookie-jar
 # Resultado esperado: 401 Unauthorized
-#   {"detail": "No autenticado"}
+#   {"detail": "Se requiere una sesión autenticada"}
 GET {{base}}/auth/yo
 
 ### C-03c · Petición enviando el token por cabecera Authorization: Bearer
@@ -117,7 +117,7 @@ GET {{base}}/auth/yo
 # RN-04 / Ejercicio 4: el servidor sólo acepta la cookie `access_token` y nunca
 # autentica por cabecera `Authorization: Bearer`.
 # Resultado esperado: 401 Unauthorized
-#   {"detail": "No autenticado"}
+#   {"detail": "Se requiere una sesión autenticada"}
 GET {{base}}/auth/yo
 Authorization: Bearer token-enviado-por-cabecera-ignorado
 
@@ -222,7 +222,7 @@ Content-Type: application/json
 ### C-06a · Registrar una venta sin sesión iniciada
 # @no-cookie-jar
 # Resultado esperado: 401 Unauthorized
-#   {"detail": "No autenticado"}
+#   {"detail": "Se requiere una sesión autenticada"}
 POST {{base}}/ventas/
 Content-Type: application/json
 
@@ -298,7 +298,7 @@ Cookie: {{cookie_ana}}
 ### C-06g · La clienta Ana Paz intenta ver la Venta 1 ajena (de Lucía Fernández)
 # @no-cookie-jar
 # Resultado esperado: 403 Forbidden
-#   {"detail": "No tiene permiso para realizar esta operación"}
+#   {"detail": "No tiene permiso para consultar esta venta"}
 GET {{base}}/ventas/1
 Cookie: {{cookie_ana}}
 
@@ -397,7 +397,7 @@ Content-Type: application/json
 # @no-cookie-jar
 # RN-06: bloqueado por la dependencia del grupo protegido en `app/main.py`.
 # Resultado esperado: 403 Forbidden
-#   {"detail": "Debe cambiar la contraseña antes de continuar"}
+#   {"detail": "Debe cambiar su contraseña"}
 GET {{base}}/ventas/
 Cookie: {{cookie_nuevo}}
 
