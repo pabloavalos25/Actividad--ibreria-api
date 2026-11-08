@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 tmp/
+Parcial_Cap1a6_*.zip
 engram-export.json
 # Herramientas de asistencia y planificación (estado local, no forman parte de la entrega)
 .atl/
