@@ -1,0 +1,433 @@
+# Casos C-01 a C-09: validación de ruta, autenticación, límite de intentos,
+# autorización por rol y vigencia, autoprotección ADMIN y cambio obligatorio
+# de contraseña.
+#
+# Antes de ejecutar este archivo de punta a punta, dejar la base en el estado
+# inicial conocido ejecutando en la raíz del proyecto:
+#   python seed.py
+#
+# Todas las peticiones de login usan `# @name` y `# @no-cookie-jar` para
+# conservar múltiples sesiones simultáneas sin que el cookie jar automático de
+# REST Client sobrescriba la cookie `access_token` entre distintos actores.
+
+@base = http://127.0.0.1:8000
+@password = secreto123
+
+### C-01a · Iniciar sesión como administradora para disponer de cookie activa
+# @name login_admin
+# @no-cookie-jar
+# Resultado esperado: 200 OK y cabecera Set-Cookie con access_token.
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "{{password}}"
+}
+
+###
+@cookie_admin = {{login_admin.response.headers.Set-Cookie}}
+
+### C-01b · Parámetro de ruta no entero con sesión iniciada
+# @no-cookie-jar
+# Resultado esperado: 422 Unprocessable Entity, rechazado por validación de ruta
+# de FastAPI sin ejecutar el handler.
+GET {{base}}/libros/abc
+Cookie: {{cookie_admin}}
+
+### C-02a · Auto-registro válido de una clienta nueva
+# @no-cookie-jar
+# Crea en una sola transacción el usuario, la asignación vigente CLIENTE y la
+# ficha en `cliente` vinculada por `usuario_id`.
+# Resultado esperado: 201 Created (sin campo `password_hash`):
+#   {
+#     "id": 6,
+#     "nombre": "Clara Núñez",
+#     "email": "clara@example.com",
+#     "activo": true,
+#     "debe_cambiar_password": false
+#   }
+POST {{base}}/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "Clara Núñez",
+  "email": "clara@example.com",
+  "password": "{{password}}"
+}
+
+### C-02b · Registro con correo ya existente en `usuario` (ana@example.com)
+# @no-cookie-jar
+# Resultado esperado: 409 Conflict con mensaje propio y sin filas sueltas:
+#   {"detail": "El correo ya está registrado"}
+POST {{base}}/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "Otra Ana",
+  "email": "ana@example.com",
+  "password": "{{password}}"
+}
+
+### C-02c · Registro con correo ya existente en `cliente` sin usuario (lucia@example.com)
+# @no-cookie-jar
+# RN-02: nunca se apropia silenciosamente de una ficha de cliente previa.
+# Resultado esperado: 409 Conflict con mensaje propio y sin filas sueltas:
+#   {"detail": "El correo ya está registrado"}
+POST {{base}}/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "Intento sobre Lucía",
+  "email": "lucia@example.com",
+  "password": "{{password}}"
+}
+
+### C-03a · Login de clienta Ana Paz (verificar Set-Cookie y cuerpo sin token)
+# @name login_ana
+# @no-cookie-jar
+# Resultado esperado: 200 OK
+# Cabecera esperada:
+#   Set-Cookie: access_token=<jwt>; HttpOnly; Max-Age=1800; Path=/; SameSite=lax
+# Cuerpo esperado (sin el token JWT ni `password_hash`):
+#   {
+#     "mensaje": "Sesión iniciada",
+#     "debe_cambiar_password": false,
+#     "expira_en_segundos": 1800
+#   }
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ana@example.com",
+  "password": "{{password}}"
+}
+
+###
+@cookie_ana = {{login_ana.response.headers.Set-Cookie}}
+
+### C-03b · Petición a ruta autenticada sin cookie de sesión
+# @no-cookie-jar
+# Resultado esperado: 401 Unauthorized
+#   {"detail": "No autenticado"}
+GET {{base}}/auth/yo
+
+### C-03c · Petición enviando el token por cabecera Authorization: Bearer
+# @no-cookie-jar
+# RN-04 / Ejercicio 4: el servidor sólo acepta la cookie `access_token` y nunca
+# autentica por cabecera `Authorization: Bearer`.
+# Resultado esperado: 401 Unauthorized
+#   {"detail": "No autenticado"}
+GET {{base}}/auth/yo
+Authorization: Bearer token-enviado-por-cabecera-ignorado
+
+### C-04a · Login con correo existente (ana@example.com) y contraseña incorrecta
+# @no-cookie-jar
+# Compara contra `usuario.password_hash` con bcrypt fuera del bucle de eventos.
+# Resultado esperado: 401 Unauthorized
+#   {"detail": "Credenciales inválidas"}
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ana@example.com",
+  "password": "clave-incorrecta-1"
+}
+
+### C-04b · Login con correo inexistente (nadie@example.com) y contraseña cualquiera
+# @no-cookie-jar
+# RN-08: compara contra `app.state.dummy_password_hash` con bcrypt para tardar
+# un tiempo equivalente y devolver exactamente el mismo cuerpo.
+# Resultado esperado: 401 Unauthorized
+#   {"detail": "Credenciales inválidas"}
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "nadie@example.com",
+  "password": "clave-incorrecta-1"
+}
+
+### C-05.1 · Primer intento fallido seguido sobre admin2@example.com (1/5)
+# @no-cookie-jar
+# Se utiliza `admin2@example.com` para no bloquear las cuentas usadas en C-06..C-09.
+# Cada fallo se persiste en `intento_acceso` en su propia sesión y transacción (RN-07).
+# Resultado esperado: 401 Unauthorized ({"detail": "Credenciales inválidas"})
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin2@example.com",
+  "password": "mala-password-1"
+}
+
+### C-05.2 · Segundo intento fallido (2/5)
+# @no-cookie-jar
+# Resultado esperado: 401 Unauthorized ({"detail": "Credenciales inválidas"})
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin2@example.com",
+  "password": "mala-password-2"
+}
+
+### C-05.3 · Tercer intento fallido (3/5)
+# @no-cookie-jar
+# Resultado esperado: 401 Unauthorized ({"detail": "Credenciales inválidas"})
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin2@example.com",
+  "password": "mala-password-3"
+}
+
+### C-05.4 · Cuarto intento fallido (4/5)
+# @no-cookie-jar
+# Resultado esperado: 401 Unauthorized ({"detail": "Credenciales inválidas"})
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin2@example.com",
+  "password": "mala-password-4"
+}
+
+### C-05.5 · Quinto intento fallido (5/5)
+# @no-cookie-jar
+# Resultado esperado: 401 Unauthorized ({"detail": "Credenciales inválidas"})
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin2@example.com",
+  "password": "mala-password-5"
+}
+
+### C-05.6 · Sexto intento seguido dentro de los 60 segundos
+# @no-cookie-jar
+# Se rechaza antes de ejecutar `bcrypt` (responde en pocos milisegundos) y en
+# `intento_acceso` quedan exactamente los 5 fallos anteriores.
+# Resultado esperado: 429 Too Many Requests con cabecera `Retry-After: <seg>`
+#   {"detail": "Demasiados intentos; vuelva a intentar"}
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin2@example.com",
+  "password": "mala-password-6"
+}
+
+### C-06a · Registrar una venta sin sesión iniciada
+# @no-cookie-jar
+# Resultado esperado: 401 Unauthorized
+#   {"detail": "No autenticado"}
+POST {{base}}/ventas/
+Content-Type: application/json
+
+{
+  "cliente_id": 3,
+  "renglones": [
+    { "libro_id": 2, "cantidad": 1 }
+  ]
+}
+
+### C-06b · Iniciar sesión como vendedor (vendedor@example.com, id=3)
+# @name login_vendedor
+# @no-cookie-jar
+# Resultado esperado: 200 OK y Set-Cookie con access_token.
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "vendedor@example.com",
+  "password": "{{password}}"
+}
+
+###
+@cookie_vendedor = {{login_vendedor.response.headers.Set-Cookie}}
+
+### C-06c · Vendedor intentando dar de alta un libro (requiere ADMIN)
+# @no-cookie-jar
+# Resultado esperado: 403 Forbidden
+#   {"detail": "No tiene permiso para realizar esta operación"}
+POST {{base}}/libros/
+Cookie: {{cookie_vendedor}}
+Content-Type: application/json
+
+{
+  "isbn": "978-950-00-0006-6",
+  "titulo": "Los que aman, odian",
+  "precio": "21000.00",
+  "stock_inicial": 4,
+  "editorial_id": 1,
+  "genero_id": 1,
+  "autores": [
+    { "autor_id": 3, "rol": "coautor", "orden": 1 },
+    { "autor_id": 4, "rol": "coautor", "orden": 2 }
+  ]
+}
+
+### C-06d · Vendedor registra una venta para la clienta Ana Paz (cliente_id=3)
+# @no-cookie-jar
+# Resultado esperado: 201 Created (Venta id=2, total "30000.00").
+POST {{base}}/ventas/
+Cookie: {{cookie_vendedor}}
+Content-Type: application/json
+
+{
+  "cliente_id": 3,
+  "renglones": [
+    { "libro_id": 2, "cantidad": 1 }
+  ]
+}
+
+### C-06e · La clienta Ana Paz consulta sus propias compras (/mis-ventas)
+# @no-cookie-jar
+# Resultado esperado: 200 OK con la venta recién registrada (id=2).
+GET {{base}}/mis-ventas
+Cookie: {{cookie_ana}}
+
+### C-06f · La clienta Ana Paz consulta el detalle de su propia venta (id=2)
+# @no-cookie-jar
+# Resultado esperado: 200 OK
+GET {{base}}/ventas/2
+Cookie: {{cookie_ana}}
+
+### C-06g · La clienta Ana Paz intenta ver la Venta 1 ajena (de Lucía Fernández)
+# @no-cookie-jar
+# Resultado esperado: 403 Forbidden
+#   {"detail": "No tiene permiso para realizar esta operación"}
+GET {{base}}/ventas/1
+Cookie: {{cookie_ana}}
+
+### C-07a · La sesión abierta del vendedor funciona antes de revocar su rol
+# @no-cookie-jar
+# Resultado esperado: 200 OK con la página de ventas.
+GET {{base}}/ventas/
+Cookie: {{cookie_vendedor}}
+
+### C-07b · La administradora revoca el rol VENDEDOR del usuario 3
+# @no-cookie-jar
+# Resultado esperado: 200 OK
+#   {"mensaje": "Rol revocado"}
+DELETE {{base}}/usuarios/3/roles/VENDEDOR
+Cookie: {{cookie_admin}}
+
+### C-07c · Siguiente pedido del vendedor con la misma cookie abierta tras la revocación
+# @no-cookie-jar
+# RN-04: `requiere_rol` consulta `asignacion_rol` en cada petición.
+# Resultado esperado: 403 Forbidden inmediato sin haber cerrado sesión:
+#   {"detail": "No tiene permiso para realizar esta operación"}
+GET {{base}}/ventas/
+Cookie: {{cookie_vendedor}}
+
+### C-07d · GET /auth/yo en la sesión del vendedor muestra diferencia entre DB y token
+# @no-cookie-jar
+# Resultado esperado: 200 OK con `"roles_vigentes": []` y `"roles_token": ["VENDEDOR"]`.
+GET {{base}}/auth/yo
+Cookie: {{cookie_vendedor}}
+
+### C-07e · Historial de roles del usuario 3 conserva la fila revocada
+# @no-cookie-jar
+# Resultado esperado: 200 OK con la fila `rol: "VENDEDOR"` y `revocada_en` no nulo.
+GET {{base}}/usuarios/3/roles
+Cookie: {{cookie_admin}}
+
+### C-07f · Asignar un rol con vencimiento en el pasado
+# @no-cookie-jar
+# Resultado esperado: 422 Unprocessable Entity
+POST {{base}}/usuarios/3/roles
+Cookie: {{cookie_admin}}
+Content-Type: application/json
+
+{
+  "rol": "VENDEDOR",
+  "vence_en": "2020-01-01T00:00:00Z"
+}
+
+### C-07g · Asignar un rol con vencimiento sin zona horaria (naive)
+# @no-cookie-jar
+# Resultado esperado: 422 Unprocessable Entity
+POST {{base}}/usuarios/3/roles
+Cookie: {{cookie_admin}}
+Content-Type: application/json
+
+{
+  "rol": "VENDEDOR",
+  "vence_en": "2099-01-01T00:00:00"
+}
+
+### C-07h · Reasignar el rol VENDEDOR válido al usuario 3 para restaurar su permiso
+# @no-cookie-jar
+# Resultado esperado: 201 Created con la nueva fila vigente en `asignacion_rol`.
+POST {{base}}/usuarios/3/roles
+Cookie: {{cookie_admin}}
+Content-Type: application/json
+
+{
+  "rol": "VENDEDOR"
+}
+
+### C-08 · La administradora (usuario_id=1) intenta revocar su propio rol ADMIN
+# @no-cookie-jar
+# RN-05: ningún administrador puede revocarse a sí mismo el rol ADMIN.
+# Resultado esperado: 409 Conflict
+#   {"detail": "No puede revocar su propio ADMIN"}
+DELETE {{base}}/usuarios/1/roles/ADMIN
+Cookie: {{cookie_admin}}
+
+### C-09a · Iniciar sesión con nuevo@example.com (debe_cambiar_password=true)
+# @name login_nuevo
+# @no-cookie-jar
+# Resultado esperado: 200 OK con `"debe_cambiar_password": true`.
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "nuevo@example.com",
+  "password": "{{password}}"
+}
+
+###
+@cookie_nuevo = {{login_nuevo.response.headers.Set-Cookie}}
+
+### C-09b · Intentar usar una ruta protegida antes de cambiar la contraseña
+# @no-cookie-jar
+# RN-06: bloqueado por la dependencia del grupo protegido en `app/main.py`.
+# Resultado esperado: 403 Forbidden
+#   {"detail": "Debe cambiar la contraseña antes de continuar"}
+GET {{base}}/ventas/
+Cookie: {{cookie_nuevo}}
+
+### C-09c · Consultar /auth/yo antes del cambio (permitido dentro de /auth)
+# @no-cookie-jar
+# Resultado esperado: 200 OK con `"debe_cambiar_password": true`.
+GET {{base}}/auth/yo
+Cookie: {{cookie_nuevo}}
+
+### C-09d · Ejecutar el cambio obligatorio de contraseña en POST /auth/cambiar-password
+# @no-cookie-jar
+# Resultado esperado: 200 OK
+#   {"mensaje": "Contraseña actualizada"}
+POST {{base}}/auth/cambiar-password
+Cookie: {{cookie_nuevo}}
+Content-Type: application/json
+
+{
+  "password_actual": "{{password}}",
+  "password_nueva": "nuevaClave456"
+}
+
+### C-09e · Verificar en /auth/yo con la misma cookie que debe_cambiar_password pasó a false
+# @no-cookie-jar
+# Resultado esperado: 200 OK con `"debe_cambiar_password": false`.
+GET {{base}}/auth/yo
+Cookie: {{cookie_nuevo}}
+
+### C-09f · La misma cookie sirve ahora en la ruta protegida sin relogin
+# @no-cookie-jar
+# Resultado esperado: 200 OK con el listado paginado de ventas.
+GET {{base}}/ventas/
+Cookie: {{cookie_nuevo}}
