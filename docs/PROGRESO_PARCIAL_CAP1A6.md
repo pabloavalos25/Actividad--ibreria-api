@@ -368,3 +368,30 @@ Por decisión del usuario, D-02/D-03/D-04/D-08 se simularon localmente con Docke
 - Limpieza confirmada: contenedores e imagen propios eliminados y PostgreSQL temporal detenido.
 
 La guía resumida y la salida real están en `despliegue/evidencia/ejercicio10_simulacion_local.md` y `despliegue/evidencia/vps_local_simulation.txt`. Esto no acredita acceso público ni permanencia de un VPS. Siguen pendientes los casos reales D-02/D-03/D-04/D-08 en VPS, el seed ampliado, materiales globales y empaquetado final.
+
+## CH-14 — Ejercicio 10: despliegue real en VPS (8 de noviembre de 2026)
+
+**Completado; IN-04 resuelta.** El TP de capítulos 1–4 preservado en `despliegue/` quedó en línea en **https://api.ismaelsuarez.me**, mediante Easypanel en el VPS Hostinger aprobado por la cátedra, siguiendo las Actividades 1–5 de DevOps. No se desplegó el parcial de capítulos 1–6 ni se utilizó Docker Compose.
+
+- Proyecto Easypanel `libreria`: App `api`, rama `master`, Dockerfile con build path `/despliegue`; PostgreSQL 18.6 en servicio `db`, red interna `libreria_db:5432`, sin puerto publicado y con volumen persistente.
+- Traefik y Let's Encrypt exponen el dominio por HTTPS hacia el puerto interno `8000`; entre los puertos probados (22, 80, 443, 3000, 5432 y 8000), sólo 22, 80 y 443 respondieron.
+- Primer inicio aproximadamente a las **20:23 UTC (17:23 ART)**. `python seed.py` se ejecutó una vez en la consola Sh: 3 editoriales, 3 géneros, 5 autores, 5 libros, 3 clientes (1 con perfil) y 2 ventas. Auto Deploy desactivado.
+
+Casos D-01…D-08 verificados en el VPS real el **2026-11-08** (hechos registrados en el Log L5–L9 de CH-14):
+
+| Caso | Resultado observado |
+|------|---------------------|
+| D-01 | `python:3.12-alpine`: **74.8 MB disco / 18.7 MB contenido**, menor a 100 MB; imagen `easypanel/libreria/api:latest`: 250 MB / 57.3 MB. |
+| D-02 | Contenedor `libreria_api.1.<id>` en estado `healthy`; primer arranque aplicó las revisiones `846f445b2248` y `332ba12e013b`, con uvicorn en `0.0.0.0:8000` y healthcheck 200. |
+| D-03 | Desde afuera: `/health/ready` 200 a las 20:33:33 UTC; `GET /libros/` **200 con los cinco libros del seed a las 21:05:40Z**. A las **21:11 UTC**, `/libros/4` 200 y `POST /ventas/` con el **cuerpo exacto del TP** (cliente 2, libro 1 ×2 + libro 4 ×1): **201**, venta **#4**, Rayuela 2×`25000.00` + Respiración artificial 1×`27000.00`, total **`77000.00`**. |
+| D-04 | Tras eliminar el contenedor aproximadamente a las 20:57 UTC, Easypanel/Swarm lo recreó `healthy`; logs sin `Running upgrade`. `GET /ventas/3` externo a las 20:58:32 UTC devolvió 200 con la venta #3 intacta. |
+| D-05 | Sin `DATABASE_URL`: salida **2**, mensaje **`Falta DATABASE_URL en el entorno externo`**, sin quedar sirviendo. |
+| D-06 | Imagen sin `.env` en `/app`, sin `DATABASE_URL` ni contraseñas en su entorno. |
+| D-07 | Proceso sin privilegios: **`uid=100(app) gid=101(app)`**. |
+| D-08 | El comprobante de la venta **#4** por **`77000.00`** apareció en los logs a las **21:11:01,586 UTC**, **después de la respuesta 201** de D-03. |
+
+La venta #3 de las 20:33Z fue preliminar (un solo renglón); D-04 comprobó su persistencia antes de registrar la venta #4 con el cuerpo exacto del TP. Se conservan ambas transcripciones.
+
+Guía y equivalencias de comandos Docker/Easypanel en [DEPLOY.md](../despliegue/DEPLOY.md); resultados en [vps_ejercicio10.md](../despliegue/evidencia/vps_ejercicio10.md), transcripción en [vps_transcript.txt](../despliegue/evidencia/vps_transcript.txt) y [capturas](../despliegue/evidencia/capturas/). No se incluyen contraseñas reales. El despliegue debe permanecer accesible hasta la publicación de las notas.
+
+**Paso restante de entrega:** CH-15 conserva su estado completado, pero se debe regenerar el archivo con `python scripts/package_entrega.py` después de incorporar la guía y la evidencia de CH-14. No entregar el `.zip` anterior, que no contiene la evidencia del VPS.

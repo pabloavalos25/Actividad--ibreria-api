@@ -1,0 +1,38 @@
+# Ejercicio 10 — Evidencia del VPS real
+
+**API:** https://api.ismaelsuarez.me · **Swagger:** https://api.ismaelsuarez.me/docs  
+**Fecha:** 2026-11-08 (UTC). Hostinger, Ubuntu 24.04.4, proyecto Easypanel `libreria`, App `api`; sólo TP 1–4.
+
+Inicio del contenedor ≈**20:23 UTC / 17:23 Argentina (UTC−3)**, derivado de `docker ps` a las ≈20:37 (`Up 14 minutes`) y de los logs de arranque. Venta preliminar #3 (un solo renglón): **20:33:33Z**. Recreación D-04: ≈**20:57 UTC**; persistencia de #3 comprobada a las **20:58:32Z**. Listado `/libros/` de D-03: **21:05:40Z**. Venta #4 con el cuerpo exacto del TP (D-03/D-08): **21:11 UTC**, posterior a D-04. Son evidencias recibidas del grupo, no una nueva conexión al VPS realizada al documentar.
+
+## Casos D-01…D-08
+
+La columna «Qué se demuestra» cita literalmente el resultado esperado de S3 (consigna). Los enlaces `#L…` señalan el inicio de cada sección de [vps_transcript.txt](vps_transcript.txt); en un visor sin enlaces de línea, buscar el encabezado `=== D-…`.
+
+| Caso | Qué se demuestra (S3) | Resultado real observado | Transcripción y captura |
+|---|---|---|---|
+| D-01 | “python:3.12-alpine por debajo de los 100 MB, y el Dockerfile parte de ella” | Base: **74.8 MB** en disco / 18.7 MB de contenido. Proyecto `easypanel/libreria/api:latest`: 250 MB / 57.3 MB. [Dockerfile](../Dockerfile) parte de `FROM python:3.12-alpine`; el límite no se aplica al tamaño final. | [D-01](vps_transcript.txt#L30) · [captura 08](capturas/08_d01_d05_d06_d07.png) |
+| D-02 | “El contenedor en estado healthy ; en docker logs , las migraciones del TP aplicadas al arrancar” | `libreria_api.1.bkq3mdmbbsk62zxyjcyw9whlx`, `Up 14 minutes (healthy)`. Primer arranque: `846f445b2248` y `332ba12e013b` aplicadas, luego Uvicorn y ready 200. Construcción/ejecución gestionadas por Easypanel, no por comandos de shell manuales. | [docker ps/images](vps_transcript.txt#L40), [arranque](vps_transcript.txt#L56) · [captura 07](capturas/07_d02_docker_ps_images.png), [captura 04](capturas/04_d02_registros_migraciones.png) |
+| D-03 | “200; 200 con la lista de libros; 201 con los precios copiados de cada libro y el total calculado” | Desde el equipo del grupo: ready **200** a las **20:33:33Z**; **`GET /libros/` 200 con los cinco libros del seed** a las **21:05:40Z**. A las **21:11 UTC**, `/libros/4` **200** (`27000.00`) y `POST /ventas/` con el **cuerpo exacto del TP** (cliente 2, libro 1 ×2 + libro 4 ×1): **201**, venta **#4**, Rayuela 2×`25000.00` + Respiración artificial 1×`27000.00`, total **`77000.00`**. La venta #3 de las 20:33Z fue preliminar (un solo renglón). | [ready y venta preliminar](vps_transcript.txt#L69), [listado](vps_transcript.txt#L108), [cuerpo TP y venta #4](vps_transcript.txt#L116) · [captura 10](capturas/10_d03_d08_venta4_cuerpo_tp.png) (corrobora solicitudes y 201, no los cuerpos HTTP) |
+| D-04 | “Vuelve a estar healthy , los datos siguen —la base no vive en el contenedor— y las migraciones no se repiten” | Tras `docker rm -f`, Swarm recreó `libreria_api.1.zcc5484zjwby8rohpa55xy1w4`: `Up 39 seconds (healthy)`. Inicio sin líneas `Running upgrade`; control externo ready **200** y `/ventas/3` **200**, venta intacta (`50000.00`). La base reside en el servicio `db`, fuera de `api`. | [recreación y curl](vps_transcript.txt#L132) · [captura 09](capturas/09_d04_recreacion.png) |
+| D-05 | “El contenedor no queda sirviendo: termina con un error, porque el TP no trae ninguna dirección de base por defecto” | `docker run --rm` sin variables: `Falta DATABASE_URL en el entorno externo`; **exit code 2**, sin iniciar HTTP. | [D-05](vps_transcript.txt#L176) · [captura 08](capturas/08_d01_d05_d06_d07.png) |
+| D-06 | “No hay .env ( docker run --rm --entrypoint ls <imagen> -a /app ) y docker run --rm --entrypoint env <imagen> no muestra DATABASE_URL ni ninguna contraseña” | `ls -a /app` sin `.env`. Entorno de la imagen sin `DATABASE_URL` ni contraseñas; `GPG_KEY` es la huella pública de la imagen oficial Python, no una clave privada. | [D-06](vps_transcript.txt#L181) · [captura 08](capturas/08_d01_d05_d06_d07.png) |
+| D-07 | “docker exec libreria id no es root” | `uid=100(app) gid=101(app) groups=101(app)`. El shell del host usado para inspeccionar es root; **el proceso del contenedor no**. | [D-07](vps_transcript.txt#L202) · [captura 08](capturas/08_d01_d05_d06_d07.png) |
+| D-08 | “El aviso del comprobante aparece en docker logs libreria después de la línea de la respuesta” | Después de `POST /ventas/ ... 201 Created`, a las **21:11:01,586 UTC** aparece `Comprobante de venta #4 enviado a tomas@example.com (total 77000.00)`. Corresponde a la venta D-03 con el cuerpo exacto del TP; es un aviso en logs, no evidencia de envío de correo real. El comprobante de #3 se conserva como antecedente preliminar. | [D-08 venta #4](vps_transcript.txt#L215) · [captura 10](capturas/10_d03_d08_venta4_cuerpo_tp.png); [antecedente #3](vps_transcript.txt#L207), [captura 06](capturas/06_d08_comprobante_log.png) |
+
+## Configuración y evidencia complementaria
+
+- **Fuente y compilación:** Git, rama `master`, `/despliegue`, builder Dockerfile: [captura 01](capturas/01_easypanel_fuente_git.png), [captura 02](capturas/02_easypanel_compilacion_dockerfile.png). La captura 02 muestra la pantalla de elección del builder; no sustituye un log completo de build.
+- **Dominio:** HTTPS hacia HTTP interno 8000: [captura 03](capturas/03_easypanel_dominio_https.png).
+- **Seed una sola vez:** `python seed.py` en la consola Sh de `api`; 3 editoriales, 3 géneros, 5 autores, 5 libros, 3 clientes (1 con perfil), 2 ventas: [salida](vps_transcript.txt#L221), [captura 05](capturas/05_seed_consola.png). **No volver a ejecutarlo**, porque reemplaza los datos.
+- **Red y certificado:** [control externo](vps_transcript.txt#L227): 22/80/443 abiertos y 3000/5432/8000 cerrados/filtrados entre los puertos probados; Let's Encrypt `CN=YR2`, vencimiento observado `Dec 9 02:02:37 2026 GMT`. No es un barrido completo ni garantiza disponibilidad futura.
+- **Conservación:** los cinco archivos de origen (`vps_ssh_salidas.txt`, `d03_externo.txt`, `d03_libros_listado.txt`, `d04_externo.txt`, `d03_cuerpo_tp.txt`) se reorganizaron por caso sin alterar sus salidas, incluidos los finales de línea HTTP. Las diez capturas se copiaron sin modificaciones; ninguna corresponde a la pestaña Entorno. No se incluyen credenciales reales. Los datos de cliente con dominio `example.com` provienen del seed de prueba.
+
+## Diferencias respecto de la ejecución literal de la consigna
+
+1. El contenedor se llama **`libreria_api.1.<id>`**, no `libreria`. La imagen real es `easypanel/libreria/api:latest`.
+2. **Easypanel construye y ejecuta** desde Git/Dockerfile; no se presenta como evidencia un `docker build` o `docker run` tecleado a mano. Las configuraciones, el primer arranque y `docker ps` documentan el resultado. Los comandos manuales completos y la tabla de equivalencias están en [DEPLOY.md](../DEPLOY.md).
+3. D-04 eliminó el contenedor mediante **`docker rm -f`**; **Easypanel/Swarm lo recreó automáticamente**, sin repetir un `docker run` manual. La evidencia muestra salud, ausencia de nuevas revisiones aplicadas y persistencia de la venta.
+4. Cronología: **venta #3 preliminar (20:33Z) → D-04 acredita persistencia de #3 (20:58:32Z) → listado `/libros/` (21:05:40Z) → venta #4 con el cuerpo exacto del TP (21:11 UTC)**. Las salidas originales de #3 se conservan; D-04 ocurrió antes de #4 y no demuestra su persistencia.
+
+El servicio debe seguir en línea hasta la publicación de las notas. Si no estuviera accesible al corregir, esta evidencia permite evaluar sólo lo efectivamente registrado; no garantiza el puntaje de los pasos literales no acreditados.

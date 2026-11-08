@@ -1,0 +1,231 @@
+EVIDENCIA REAL DEL VPS — 2026-11-08 (UTC)
+URL: https://api.ismaelsuarez.me
+
+Fuentes del grupo: vps_ssh_salidas.txt, d03_externo.txt, d03_libros_listado.txt, d04_externo.txt y d03_cuerpo_tp.txt.
+Los encabezados === organizan los casos; los bloques de origen se conservan
+byte por byte (incluidos los finales de línea HTTP). No son comandos nuevos
+ejecutados al documentar. Los comandos del bloque 2 se comparten entre casos.
+
+=== Procedencia ===
+# Salidas en el VPS por SSH (root@srv1915812, Ubuntu 24.04.4 LTS) — 2026-11-08 (UTC)
+# Transcripción literal de las capturas del grupo. Sin credenciales.
+
+
+=== Comandos compartidos D-01 / D-05 / D-06 / D-07 ===
+## Bloque 2 — D-01, D-05, D-06, D-07
+root@srv1915812:~# IMG=easypanel/libreria/api:latest
+   CT=$(docker ps -q --filter name=libreria_api)
+   echo "== D-01 =="
+   docker pull -q python:3.12-alpine
+   docker images python:3.12-alpine
+   docker images $IMG
+   echo "== D-05 =="
+   docker run --rm $IMG; echo "exit code: $?"
+   echo "== D-06 =="
+   docker run --rm --entrypoint ls $IMG -a /app
+   docker run --rm --entrypoint env $IMG
+   echo "== D-07 =="
+   docker exec $CT id
+
+=== D-01 — Imagen base y proyecto ===
+== D-01 ==
+docker.io/library/python:3.12-alpine
+
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+python:3.12-alpine   e064671ca452       74.8MB         18.7MB
+
+IMAGE                           ID             DISK USAGE   CONTENT SIZE   EXTRA
+easypanel/libreria/api:latest   16c5055f8e51        250MB         57.3MB    U
+
+=== D-02 — Estado y docker images ===
+## Bloque 1 (≈20:37 UTC) — contenedor e imagen en ejecución (D-02)
+root@srv1915812:~# docker ps --filter name=libreria_api --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+NAMES                                    IMAGE                           STATUS
+libreria_api.1.bkq3mdmbbsk62zxyjcyw9whlx   easypanel/libreria/api:latest   Up 14 minutes (healthy)
+root@srv1915812:~# docker images
+IMAGE                                       ID             DISK USAGE   CONTENT SIZE   EXTRA
+easypanel/easypanel:latest                  9af9b2f27512       1.33GB          355MB    U
+easypanel/grupo3/calculadora-backend:latest 305a6f384d60        272MB         64.6MB    U
+easypanel/grupo3/calculadora-frontend:latest ac6bc9c2f269       102MB         28.8MB    U
+easypanel/libreria/api:latest               16c5055f8e51        250MB         57.3MB    U
+postgres:17                                 b8faeff77126        646MB          167MB
+postgres:18                                 e3d24f6906d0        650MB          169MB    U
+traefik:3.6.7                               a9890c898f37        242MB           53MB    U
+
+
+=== D-02 — Primer arranque / migraciones ===
+## Primer arranque en Easypanel (pestaña Registros del servicio api) — D-02
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 846f445b2248, esquema inicial sin genero
+INFO  [alembic.runtime.migration] Running upgrade 846f445b2248 -> 332ba12e013b, agrega genero y libro.genero_id
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:44102 - "GET /health/ready HTTP/1.1" 200 OK
+
+
+=== D-03 — Acceso externo; venta preliminar #3 (un solo renglón), 20:33 UTC ===
+# D-03 desde fuera del VPS — 2026-11-08T20:33:32Z (UTC) — origen: equipo del grupo
+$ curl -sS -i https://api.ismaelsuarez.me/health/ready
+HTTP/2 200 
+content-type: application/json
+date: Sun, 08 Nov 2026 20:33:33 GMT
+server: uvicorn
+content-length: 35
+
+{"estado":"ok","base":"disponible"}
+
+$ curl -sS -i https://api.ismaelsuarez.me/libros/1
+HTTP/2 200 
+content-type: application/json
+date: Sun, 08 Nov 2026 20:33:33 GMT
+server: uvicorn
+content-length: 244
+
+{"id":1,"isbn":"978-950-00-0001-1","titulo":"Rayuela","precio":"25000.00","stock":10,"editorial":{"id":2,"nombre":"Sudamericana"},"genero":{"id":2,"nombre":"Novela"},"autores":[{"autor_id":1,"nombre":"Julio Cortázar","rol":"autor","orden":1}]}
+
+$ curl -sS -i -X POST https://api.ismaelsuarez.me/ventas/ -H "Content-Type: application/json" -d '{"cliente_id": 2, "renglones": [{"libro_id": 1, "cantidad": 2}]}'
+HTTP/2 201 
+content-type: application/json
+date: Sun, 08 Nov 2026 20:33:33 GMT
+server: uvicorn
+content-length: 248
+
+{"id":3,"fecha":"2026-11-08T20:33:33.863493Z","total":"50000.00","cliente":{"id":2,"nombre":"Tomás Ríos","email":"tomas@example.com"},"renglones":[{"libro_id":1,"titulo":"Rayuela","cantidad":2,"precio_unitario":"25000.00","subtotal":"50000.00"}]}
+
+$ curl -sS -i https://api.ismaelsuarez.me/libros/1
+HTTP/2 200 
+content-type: application/json
+date: Sun, 08 Nov 2026 20:33:34 GMT
+server: uvicorn
+content-length: 244
+
+{"id":1,"isbn":"978-950-00-0001-1","titulo":"Rayuela","precio":"25000.00","stock":10,"editorial":{"id":2,"nombre":"Sudamericana"},"genero":{"id":2,"nombre":"Novela"},"autores":[{"autor_id":1,"nombre":"Julio Cortázar","rol":"autor","orden":1}]}
+
+
+# D-03 (complemento) GET /libros/ desde fuera del VPS — 2026-11-08T21:05:40Z (UTC)
+$ curl -sS -i https://api.ismaelsuarez.me/libros/
+HTTP/2 200 
+content-type: application/json
+
+[{"id":1,"isbn":"978-950-00-0001-1","titulo":"Rayuela","precio":"25000.00","stock":10,"editorial":{"id":2,"nombre":"Sudamericana"},"genero":{"id":2,"nombre":"Novela"}},{"id":2,"isbn":"978-950-00-0002-2","titulo":"Ficciones","precio":"18000.00","stock":8,"editorial":{"id":1,"nombre":"Emecé"},"genero":{"id":3,"nombre":"Cuento"}},{"id":3,"isbn":"978-950-00-0003-3","titulo":"La invención de Morel","precio":"16500.00","stock":6,"editorial":{"id":1,"nombre":"Emecé"},"genero":null},{"id":4,"isbn":"978-950-00-0004-4","titulo":"Respiración artificial","precio":"27000.00","stock":5,"editorial":{"id":3,"nombre":"Anagrama"},"genero":{"id":2,"nombre":"Novela"}},{"id":5,"isbn":"978-950-00-0005-5","titulo":"Seis problemas para don Isidro Parodi","precio":"19500.00","stock":4,"editorial":{"id":2,"nombre":"Sudamericana"},"genero":{"id":1,"nombre":"Policial"}}]
+
+
+=== D-03 — Venta #4 con el cuerpo exacto del TP, 21:11 UTC (posterior a D-04) ===
+# D-03 con el cuerpo de ejemplo exacto del TP (consigna TP 1-4, pág. 9) desde fuera del VPS — 2026-11-08T21:11:00Z (UTC)
+$ curl -sS -i https://api.ismaelsuarez.me/libros/4
+HTTP/2 200 
+content-type: application/json
+
+{"id":4,"isbn":"978-950-00-0004-4","titulo":"Respiración artificial","precio":"27000.00","stock":5,"editorial":{"id":3,"nombre":"Anagrama"},"genero":{"id":2,"nombre":"Novela"},"autores":[{"autor_id":2,"nombre":"Ricardo Piglia","rol":"autor","orden":1}]}
+
+
+$ curl -sS -i -X POST https://api.ismaelsuarez.me/ventas/ -H "Content-Type: application/json" -d '{"cliente_id": 2, "renglones": [{"libro_id": 1, "cantidad": 2}, {"libro_id": 4, "cantidad": 1}]}'
+HTTP/2 201 
+content-type: application/json
+
+{"id":4,"fecha":"2026-11-08T21:11:01.071138Z","total":"77000.00","cliente":{"id":2,"nombre":"Tomás Ríos","email":"tomas@example.com"},"renglones":[{"libro_id":1,"titulo":"Rayuela","cantidad":2,"precio_unitario":"25000.00","subtotal":"50000.00"},{"libro_id":4,"titulo":"Respiración artificial","cantidad":1,"precio_unitario":"27000.00","subtotal":"27000.00"}]}
+
+
+=== D-04 — Recreación y persistencia ===
+## Bloque 3 (≈20:57 UTC) — D-04
+root@srv1915812:~# echo "== D-04: antes =="
+   docker ps --filter name=libreria_api --format 'table {{.Names}}\t{{.Status}}'
+   docker rm -f $(docker ps -q --filter name=libreria_api)
+   echo "Esperando que Easypanel lo recree..."; sleep 45
+   echo "== D-04: después =="
+   docker ps --filter name=libreria_api --format 'table {{.Names}}\t{{.Status}}'
+   docker logs $(docker ps -q --filter name=libreria_api) 2>&1 | head -12
+== D-04: antes ==
+NAMES                                      STATUS
+libreria_api.1.bkq3mdmbbsk62zxyjcyw9whlx   Up 34 minutes (healthy)
+166c051c4371
+Esperando que Easypanel lo recree...
+== D-04: después ==
+NAMES                                      STATUS
+libreria_api.1.zcc5484zjwby8rohpa55xy1w4   Up 39 seconds (healthy)
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49052 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55572 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55574 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52128 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52140 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35986 - "GET /health/ready HTTP/1.1" 200 OK
+
+# D-04 verificación externa posterior a la recreación — 2026-11-08T20:58:32Z (UTC)
+$ curl -sS -i https://api.ismaelsuarez.me/health/ready
+HTTP/2 200 
+content-type: application/json
+
+{"estado":"ok","base":"disponible"}
+
+$ curl -sS -i https://api.ismaelsuarez.me/ventas/3
+HTTP/2 200 
+content-type: application/json
+
+{"id":3,"fecha":"2026-11-08T20:33:33.863493Z","total":"50000.00","cliente":{"id":2,"nombre":"Tomás Ríos","email":"tomas@example.com"},"renglones":[{"libro_id":1,"titulo":"Rayuela","cantidad":2,"precio_unitario":"25000.00","subtotal":"50000.00"}]}
+
+
+=== D-05 — Inicio sin DATABASE_URL ===
+== D-05 ==
+/app/docker-entrypoint.sh: line 4: DATABASE_URL: Falta DATABASE_URL en el entorno externo
+exit code: 2
+
+=== D-06 — Contenido y entorno de imagen ===
+== D-06 ==
+.
+..
+alembic.ini
+app
+docker-entrypoint.sh
+healthcheck.py
+migrations
+requirements.txt
+seed.py
+PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HOSTNAME=5fa466dec625
+LANG=C.UTF-8
+GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305
+PYTHON_VERSION=3.12.16
+PYTHON_SHA256=b5796915dc45ff745cfb4e990a7e7c93d6f546328a102ce31448d69ebc37575c
+PYTHONDONTWRITEBYTECODE=1
+PYTHONUNBUFFERED=1
+HOME=/home/app
+
+=== D-07 — Usuario del proceso ===
+== D-07 ==
+uid=100(app) gid=101(app) groups=101(app)
+
+
+=== D-08 — Venta preliminar #3 (un solo renglón), 20:33 UTC; comprobante posterior al 201 ===
+# D-08 — Registros del servicio libreria/api en Easypanel (transcripción de la captura)
+INFO:     10.11.0.9:56746 - "GET /health/ready HTTP/1.1" 200 OK
+INFO:     10.11.0.9:56746 - "GET /libros/1 HTTP/1.1" 200 OK
+INFO:     10.11.0.9:56746 - "POST /ventas/ HTTP/1.1" 201 Created
+INFO:     10.11.0.9:56746 - "GET /libros/1 HTTP/1.1" 200 OK
+2026-11-08 20:33:34,382 libreria.ventas INFO Comprobante de venta #3 enviado a tomas@example.com (total 50000.00)
+
+=== D-08 — Venta #4 con el cuerpo exacto del TP, 21:11 UTC; comprobante posterior al 201 ===
+# D-08 de la venta #4 — Registros del servicio libreria/api en Easypanel (transcripción de la captura)
+INFO:     10.11.0.9:54968 - "GET /libros/4 HTTP/1.1" 200 OK
+INFO:     10.11.0.9:54968 - "POST /ventas/ HTTP/1.1" 201 Created
+2026-11-08 21:11:01,586 libreria.ventas INFO Comprobante de venta #4 enviado a tomas@example.com (total 77000.00)
+
+=== Datos iniciales — Seed ejecutado una vez ===
+## Carga de datos iniciales (consola Sh del servicio api en Easypanel, una sola vez)
+/app $ python seed.py
+Estado inicial cargado: 3 editoriales, 3 géneros, 5 autores, 5 libros, 3 clientes (1 con perfil) y 2 ventas.
+
+
+=== Red y certificado — Comprobaciones externas ===
+## Puertos vistos desde afuera (conexión TCP desde el equipo del grupo, 2026-11-08)
+22 abierto · 80 abierto · 443 abierto · 3000 cerrado/filtrado · 5432 cerrado/filtrado · 8000 cerrado/filtrado
+Certificado de api.ismaelsuarez.me: issuer=C=US, O=Let's Encrypt, CN=YR2; notAfter=Dec  9 02:02:37 2026 GMT
+
